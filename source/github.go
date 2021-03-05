@@ -3,8 +3,13 @@ package source
 import (
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
-	"github.com/google/go-github/v33/github"
+	githubv3 "github.com/google/go-github/v33/github"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
@@ -26,13 +31,13 @@ func NewSource(token string) *Source {
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 	return &Source{
-		cliv3: github.NewClient(httpClient),
+		cliv3: githubv3.NewClient(httpClient),
 		cliv4: githubv4.NewClient(httpClient),
 	}
 }
 
 type Source struct {
-	cliv3 *github.Client
+	cliv3 *githubv3.Client
 	cliv4 *githubv4.Client
 }
 
@@ -90,8 +95,8 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 }
 
 func (s *Source) CommitCounter(ctx context.Context, username string) (int, error) {
-	result, _, err := s.cliv3.Search.Commits(ctx, fmt.Sprintf("author:%q", username), &github.SearchOptions{
-		ListOptions: github.ListOptions{
+	result, _, err := s.cliv3.Search.Commits(ctx, fmt.Sprintf("author:%q", username), &githubv3.SearchOptions{
+		ListOptions: githubv3.ListOptions{
 			Page:    1,
 			PerPage: 1,
 		},
@@ -100,4 +105,118 @@ func (s *Source) CommitCounter(ctx context.Context, username string) (int, error
 		return 0, err
 	}
 	return *result.Total, nil
+}
+
+func (s *Source) UploadGist(ctx context.Context, owner, description, name string, r io.Reader) (string, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+	dataContext := string(data)
+
+	respGist, _, err := s.cliv3.Gists.List(ctx, owner, &githubv3.GistListOptions{
+		ListOptions: githubv3.ListOptions{
+			Page:    1,
+			PerPage: 100,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	var oriGist *githubv3.Gist
+	for _, gist := range respGist {
+		if gist.Description != nil && *gist.Description == description {
+			oriGist = gist
+			break
+		}
+	}
+
+	var raw string
+	if oriGist == nil {
+		gist, _, err := s.cliv3.Gists.Create(ctx, &githubv3.Gist{
+			Public: githubv3.Bool(true),
+			Files: map[githubv3.GistFilename]githubv3.GistFile{
+				githubv3.GistFilename(name): {
+					Content: &dataContext,
+				},
+			},
+			Description: &description,
+		})
+		if err != nil {
+			return "", err
+		}
+		raw = *gist.Files[githubv3.GistFilename(name)].RawURL
+	} else {
+		oriGist.Files[githubv3.GistFilename(name)] = githubv3.GistFile{
+			Filename: &name,
+			Content:  &dataContext,
+		}
+		gist, _, err := s.cliv3.Gists.Edit(ctx, *oriGist.ID, oriGist)
+		if err != nil {
+			return "", err
+		}
+		raw = *gist.Files[githubv3.GistFilename(name)].RawURL
+	}
+	raw = strings.SplitN(raw, "/raw/", 2)[0] + "/raw/" + name
+	return raw, nil
+}
+
+func (s *Source) UploadAsset(ctx context.Context, owner, repo, release, name string, r io.Reader) (string, error) {
+	respReleases, _, err := s.cliv3.Repositories.ListReleases(ctx, owner, repo, &githubv3.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	})
+	if err != nil {
+		return "", err
+	}
+	var releaseID *int64
+	for _, r := range respReleases {
+		if r.Name != nil && *r.Name == release {
+			releaseID = r.ID
+			break
+		}
+	}
+	if releaseID == nil {
+		respRelease, _, err := s.cliv3.Repositories.CreateRelease(ctx, owner, repo, &githubv3.RepositoryRelease{
+			Name:    &release,
+			TagName: &release,
+		})
+		if err != nil {
+			return "", err
+		}
+		releaseID = respRelease.ID
+	}
+
+	dir, err := ioutil.TempDir(os.TempDir(), "profile_stats")
+	if err != nil {
+		return "", err
+	}
+
+	filename := filepath.Join(dir, name)
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	_, err = io.Copy(f, r)
+	if err != nil {
+		return "", err
+	}
+	err = f.Sync()
+	if err != nil {
+		return "", err
+	}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		return "", err
+	}
+
+	respAsset, _, err := s.cliv3.Repositories.UploadReleaseAsset(ctx, owner, repo, *releaseID, &githubv3.UploadOptions{
+		Name: name,
+	}, f)
+	if err != nil {
+		return "", err
+	}
+	return *respAsset.URL, nil
 }
