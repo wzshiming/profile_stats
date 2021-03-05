@@ -15,9 +15,9 @@ type Stats struct {
 	source *source.Source
 }
 
-func NewStats(token string) *Stats {
+func NewStats(src *source.Source) *Stats {
 	return &Stats{
-		source: source.NewSource(token),
+		source: src,
 	}
 }
 
