@@ -1,0 +1,40 @@
+{{$bound := 40}}
+{{$context_offset := 25}}
+{{$title_offset := 40}}
+{{$line_offset := 25}}
+{{$left_off := 25}}
+
+{{$title_len := strLen .Title}}
+
+{{$height := add $bound (mul $line_offset (len .Items))}}
+{{$width := max 260 (mul 12 $title_len)}}
+
+{{if .Title}}{{$height = add $height $title_offset}}{{end}}
+
+<svg width="{{$width}}" height="{{$height}}" viewBox="0 0 $width {{$height}}" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {{with .CSS}}
+    <style>
+        {{.}}
+    </style>
+    {{end}}
+    {{if or (ne .BackgroundColor "none") (ne .DarkBackgroundColor "none") }}
+    <rect class="background" x="0.5" y="0.5" rx="4.5" height="99%" width="99%"/>
+    {{end}}
+    {{with .Title}}
+    <g transform="translate({{$left_off}}, {{$title_offset}})" class="singleitem" style="animation-delay: 50ms">
+        <text class="title" x="0" y="0">{{.}}</text>
+    </g>
+    {{$context_offset = add $context_offset $title_offset}}
+    {{end}}
+    {{with .Items}}
+    <g transform="translate({{$left_off}}, {{$context_offset}})">
+        {{range $i, $item := .}}
+        <g transform="translate(0, {{mul $i 25}})" class="singleitem" style="animation-delay: {{add 110 (mul $i 100)}}ms">
+            {{with $item.IconData}}{{.}}{{end}}
+            <text class="key" x="25" y="12.5">{{with $item.Key}}{{.}}{{else}}UNKNOWN{{end}}:</text>
+            <text class="value" x="180" y="12.5">{{with $item.Value}}{{.}}{{else}}0{{end}}</text>
+        </g>
+        {{end}}
+    </g>
+    {{end}}
+</svg>
