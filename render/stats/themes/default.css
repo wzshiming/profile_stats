@@ -1,0 +1,131 @@
+
+.singleitem {
+    opacity: 0;
+    animation: fade 0.3s ease-in-out forwards;
+}
+
+@keyframes fade {
+    from {
+        opacity: .5;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.title {
+    font-family: 'Segoe UI', Ubuntu, Sans-Serif;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.key,.value{
+    font-family: 'Segoe UI', Ubuntu, "Helvetica Neue", Sans-Serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.icon {
+    {{with .IconColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #d1d5da;
+    {{end}}
+}
+
+.title{
+    {{with .TitleColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #24292e;
+    {{end}}
+}
+
+.key{
+    {{with .KeyColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #586069;
+    {{end}}
+}
+
+.value{
+    {{with .ValueColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #24292e;
+    {{end}}
+}
+
+{{if ne .BackgroundColor "none"}}
+.background {
+    {{with .BackgroundColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #fff;
+    {{end}}
+}
+{{end}}
+
+{{if ne .StrokeColor "none"}}
+.background {
+    {{with .StrokeColor}}
+    stroke: {{.}};
+    {{else}}
+    stroke: #e4e2e2;
+    {{end}}
+    stroke-opacity: 1;
+}
+{{end}}
+
+
+@media (prefers-color-scheme: dark) {
+    .icon {
+        {{with .DarkIconColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #8b949e;
+        {{end}}
+    }
+    {{if ne .DarkBackgroundColor "none"}}
+    .background {
+        {{with .DarkBackgroundColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #0d1117;
+        {{end}}
+    }
+    {{end}}
+    {{if ne .DarkStrokeColor "none"}}
+    .background {
+        {{with .DarkStrokeColor}}
+        stroke: {{.}};
+        {{else}}
+        stroke: #e4e2e2;
+        {{end}}
+    }
+    {{end}}
+
+    .title{
+        {{with .DarkTitleColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #c9d1d9;
+        {{end}}
+    }
+    .key {
+        {{with .DarkKeyColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #8b949e;
+        {{end}}
+    }
+    .value{
+        {{with .DarkValueColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #c9d1d9;
+        {{end}}
+    }
+}
