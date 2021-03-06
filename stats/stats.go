@@ -33,11 +33,7 @@ func (s *Stats) Get(ctx context.Context, w io.Writer, username string, handles .
 	for _, handle := range handles {
 		handle(&data)
 	}
-	err = render.StatsRender(w, data)
-	if err != nil {
-		return err
-	}
-	return err
+	return render.StatsRender(w, data)
 }
 
 type HandleStatsData func(s *render.StatsData)

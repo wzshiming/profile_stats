@@ -1,7 +1,12 @@
 package render
 
 import (
+	"bytes"
+	"io"
+	"strings"
+	"sync"
 	"text/template"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -72,4 +77,41 @@ func runeWidth(r rune) int {
 	}
 
 	return 0
+}
+
+var poolBuffer = sync.Pool{
+	New: func() interface{} {
+		return &strings.Builder{}
+	},
+}
+
+func getBuffer() *strings.Builder {
+	buf := poolBuffer.Get().(*strings.Builder)
+	buf.Reset()
+	return buf
+}
+
+func putBuffer(buf *strings.Builder) {
+	poolBuffer.Put(buf)
+}
+
+type compressedSpacesWriter struct {
+	writer io.Writer
+}
+
+func (c *compressedSpacesWriter) Write(p []byte) (n int, err error) {
+	n = len(p)
+	p = bytes.TrimLeftFunc(p, unicode.IsSpace)
+	for len(p) != 0 {
+		i := bytes.IndexFunc(p, unicode.IsSpace)
+		if i == -1 {
+			return c.writer.Write(p)
+		}
+		_, err = c.writer.Write(p[:i+1])
+		if err != nil {
+			return 0, err
+		}
+		p = bytes.TrimLeftFunc(p[i+1:], unicode.IsSpace)
+	}
+	return n, nil
 }

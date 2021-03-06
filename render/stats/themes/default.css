@@ -30,7 +30,7 @@
     {{with .IconColor}}
     fill: {{.}};
     {{else}}
-    fill: #d1d5da;
+    fill: #959da5;
     {{end}}
 }
 
