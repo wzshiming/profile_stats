@@ -1,0 +1,11 @@
+<svg width="{{.Width}}" height="{{.Height}}" viewBox="0 0 {{.Width}} {{.Height}}" xmlns="http://www.w3.org/2000/svg">
+    {{with .CSS}}
+    <style>
+        {{.}}
+    </style>
+    {{end}}
+    {{if or (ne .BackgroundColor "none") (ne .DarkBackgroundColor "none") }}
+    <rect class="background" x="0.5" y="0.5" rx="4.5" height="99%" width="99%"/>
+    {{end}}
+    <text class="text" text-anchor="middle" x="{{div .Width 2}}" y="{{div .Height 2}}">{{with .Text}}{{.}}{{else}}UNKNOWN{{end}}</text>
+</svg>
