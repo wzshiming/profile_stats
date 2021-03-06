@@ -96,10 +96,7 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 
 func (s *Source) CommitCounter(ctx context.Context, username string) (int, error) {
 	result, _, err := s.cliv3.Search.Commits(ctx, fmt.Sprintf("author:%q", username), &githubv3.SearchOptions{
-		ListOptions: githubv3.ListOptions{
-			Page:    1,
-			PerPage: 1,
-		},
+		ListOptions: githubv3.ListOptions{PerPage: 1},
 	})
 	if err != nil {
 		return 0, err
@@ -114,22 +111,18 @@ func (s *Source) UploadGist(ctx context.Context, owner, description, name string
 	}
 	dataContext := string(data)
 
-	respGist, _, err := s.cliv3.Gists.List(ctx, owner, &githubv3.GistListOptions{
-		ListOptions: githubv3.ListOptions{
-			Page:    1,
-			PerPage: 100,
-		},
+	var oriGist *githubv3.Gist
+	_, err = s.listGist(ctx, owner, func(gists []*githubv3.Gist) bool {
+		for _, gist := range gists {
+			if gist.Description != nil && *gist.Description == description {
+				oriGist = gist
+				return false
+			}
+		}
+		return true
 	})
 	if err != nil {
 		return "", err
-	}
-
-	var oriGist *githubv3.Gist
-	for _, gist := range respGist {
-		if gist.Description != nil && *gist.Description == description {
-			oriGist = gist
-			break
-		}
 	}
 
 	var raw string
@@ -148,35 +141,40 @@ func (s *Source) UploadGist(ctx context.Context, owner, description, name string
 		}
 		raw = *gist.Files[githubv3.GistFilename(name)].RawURL
 	} else {
-		oriGist.Files[githubv3.GistFilename(name)] = githubv3.GistFile{
-			Filename: &name,
-			Content:  &dataContext,
+		file := oriGist.Files[githubv3.GistFilename(name)]
+		if file.Content != nil && *file.Content == dataContext {
+			raw = *oriGist.Files[githubv3.GistFilename(name)].RawURL
+		} else {
+			oriGist.Files[githubv3.GistFilename(name)] = githubv3.GistFile{
+				Filename: &name,
+				Content:  &dataContext,
+			}
+			gist, _, err := s.cliv3.Gists.Edit(ctx, *oriGist.ID, oriGist)
+			if err != nil {
+				return "", err
+			}
+			raw = *gist.Files[githubv3.GistFilename(name)].RawURL
 		}
-		gist, _, err := s.cliv3.Gists.Edit(ctx, *oriGist.ID, oriGist)
-		if err != nil {
-			return "", err
-		}
-		raw = *gist.Files[githubv3.GistFilename(name)].RawURL
 	}
 	raw = strings.SplitN(raw, "/raw/", 2)[0] + "/raw/" + name
 	return raw, nil
 }
 
 func (s *Source) UploadAsset(ctx context.Context, owner, repo, release, name string, r io.Reader) (string, error) {
-	respReleases, _, err := s.cliv3.Repositories.ListReleases(ctx, owner, repo, &githubv3.ListOptions{
-		Page:    1,
-		PerPage: 100,
+	var releaseID *int64
+	_, err := s.listReleases(ctx, owner, repo, func(releases []*githubv3.RepositoryRelease) bool {
+		for _, r := range releases {
+			if r.Name != nil && *r.Name == release {
+				releaseID = r.ID
+				return false
+			}
+		}
+		return true
 	})
 	if err != nil {
 		return "", err
 	}
-	var releaseID *int64
-	for _, r := range respReleases {
-		if r.Name != nil && *r.Name == release {
-			releaseID = r.ID
-			break
-		}
-	}
+
 	if releaseID == nil {
 		respRelease, _, err := s.cliv3.Repositories.CreateRelease(ctx, owner, repo, &githubv3.RepositoryRelease{
 			Name:    &release,
@@ -219,4 +217,50 @@ func (s *Source) UploadAsset(ctx context.Context, owner, repo, release, name str
 		return "", err
 	}
 	return *respAsset.URL, nil
+}
+
+func (s *Source) listReleases(ctx context.Context, owner, repo string, next func([]*githubv3.RepositoryRelease) bool) ([]*githubv3.RepositoryRelease, error) {
+	opt := &githubv3.ListOptions{
+		PerPage: 100,
+	}
+	var out []*githubv3.RepositoryRelease
+	for {
+		list, resp, err := s.cliv3.Repositories.ListReleases(ctx, owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+		if next != nil && !next(list) {
+			return out, nil
+		}
+		out = append(out, list...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return out, nil
+}
+
+func (s *Source) listGist(ctx context.Context, owner string, next func([]*githubv3.Gist) bool) ([]*githubv3.Gist, error) {
+	opt := githubv3.ListOptions{
+		PerPage: 100,
+	}
+	var out []*githubv3.Gist
+	for {
+		list, resp, err := s.cliv3.Gists.List(ctx, owner, &githubv3.GistListOptions{
+			ListOptions: opt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if next != nil && !next(list) {
+			return out, nil
+		}
+		out = append(out, list...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return out, nil
 }
