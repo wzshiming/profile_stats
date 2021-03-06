@@ -1,0 +1,61 @@
+
+.text {
+    {{with .TextColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #24292e;
+    {{end}}
+    font-weight: bold;
+    font-family: 'Segoe UI', Ubuntu, Sans-Serif;
+    dominant-baseline: central;
+    font-size: 16px;
+}
+
+{{if ne .BackgroundColor "none"}}
+.background {
+    {{with .BackgroundColor}}
+    fill: {{.}};
+    {{else}}
+    fill: #fff;
+    {{end}}
+}
+{{end}}
+
+{{if ne .StrokeColor "none"}}
+.background {
+    {{with .StrokeColor}}
+    stroke: {{.}};
+    {{else}}
+    stroke: #e4e2e2;
+    {{end}}
+    stroke-opacity: 1;
+}
+{{end}}
+
+@media (prefers-color-scheme: dark) {
+    {{if ne .DarkBackgroundColor "none"}}
+    .background {
+        {{with .DarkBackgroundColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #0d1117;
+        {{end}}
+    }
+    {{end}}
+    {{if ne .DarkStrokeColor "none"}}
+    .background {
+        {{with .DarkStrokeColor}}
+        stroke: {{.}};
+        {{else}}
+        stroke: #e4e2e2;
+        {{end}}
+    }
+    {{end}}
+    .text {
+        {{with .DarkTextColor}}
+        fill: {{.}};
+        {{else}}
+        fill: #c9d1d9;
+        {{end}}
+    }
+}
