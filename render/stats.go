@@ -1,14 +1,10 @@
 package render
 
 import (
-	"bytes"
 	"embed"
 	"io"
 	"log"
-	"strings"
-	"sync"
 	"text/template"
-	"unicode"
 )
 
 var (
@@ -55,11 +51,9 @@ type StatsItem struct {
 }
 
 func StatsRender(w io.Writer, data StatsData) error {
-	data.Theme = strings.TrimSuffix(data.Theme, ".css")
 	if data.Theme == "" {
 		data.Theme = "default"
 	}
-	data.Layout = strings.TrimSuffix(data.Layout, ".svg")
 	if data.Layout == "" {
 		data.Layout = "default"
 	}
@@ -91,43 +85,6 @@ func StatsRender(w io.Writer, data StatsData) error {
 		writer: w,
 	}
 	return statsTemplate.ExecuteTemplate(w, data.Layout+".svg", data)
-}
-
-var poolBuffer = sync.Pool{
-	New: func() interface{} {
-		return &strings.Builder{}
-	},
-}
-
-func getBuffer() *strings.Builder {
-	buf := poolBuffer.Get().(*strings.Builder)
-	buf.Reset()
-	return buf
-}
-
-func putBuffer(buf *strings.Builder) {
-	poolBuffer.Put(buf)
-}
-
-type compressedSpacesWriter struct {
-	writer io.Writer
-}
-
-func (c *compressedSpacesWriter) Write(p []byte) (n int, err error) {
-	n = len(p)
-	p = bytes.TrimLeftFunc(p, unicode.IsSpace)
-	for len(p) != 0 {
-		i := bytes.IndexFunc(p, unicode.IsSpace)
-		if i == -1 {
-			return c.writer.Write(p)
-		}
-		_, err = c.writer.Write(p[:i+1])
-		if err != nil {
-			return 0, err
-		}
-		p = bytes.TrimLeftFunc(p[i+1:], unicode.IsSpace)
-	}
-	return n, nil
 }
 
 var itemsDefault = []StatsItem{
