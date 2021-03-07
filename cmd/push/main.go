@@ -13,13 +13,27 @@ import (
 
 func main() {
 	ctx := context.Background()
-	token := os.Getenv("GITHUB_TOKEN")
-	username := os.Getenv("GITHUB_ID")
+	username := os.Getenv("GH_ID")
+	token := os.Getenv("GH_TOKEN")
+
+	owner := os.Getenv("GIT_OWNER")
+	repo := os.Getenv("GIT_REPO")
+	branch := os.Getenv("GIT_BRANCH")
+
 	if username == "" {
-		log.Fatal("GITHUB_ID can not be empty")
+		log.Fatal("GH_ID can not be empty")
 	}
 	if token == "" {
-		log.Fatal("GITHUB_TOKEN can not be empty")
+		log.Fatal("GH_TOKEN can not be empty")
+	}
+	if owner == "" {
+		log.Fatal("GIT_OWNER can not be empty")
+	}
+	if repo == "" {
+		log.Fatal("GIT_REPO can not be empty")
+	}
+	if branch == "" {
+		branch = "gh-pages"
 	}
 	buf := bytes.NewBuffer(nil)
 	src := source.NewSource(token)
@@ -28,9 +42,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	repo := "profile_stats"
+
 	filename := fmt.Sprintf("%s-stats.svg", username)
-	u, err := src.UploadGist(ctx, username, repo, filename, buf)
+
+	u, err := src.UploadGit(ctx, owner, repo, branch, filename, buf)
 	if err != nil {
 		log.Fatal(err)
 	}

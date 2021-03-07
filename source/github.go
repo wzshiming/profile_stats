@@ -8,7 +8,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/go-git/go-git/v5"
+	gitconfig "github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	githubv3 "github.com/google/go-github/v33/github"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
@@ -31,12 +37,14 @@ func NewSource(token string) *Source {
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 	return &Source{
+		token: token,
 		cliv3: githubv3.NewClient(httpClient),
 		cliv4: githubv4.NewClient(httpClient),
 	}
 }
 
 type Source struct {
+	token string
 	cliv3 *githubv3.Client
 	cliv4 *githubv4.Client
 }
@@ -186,7 +194,7 @@ func (s *Source) UploadAsset(ctx context.Context, owner, repo, release, name str
 		releaseID = respRelease.ID
 	}
 
-	dir, err := ioutil.TempDir(os.TempDir(), "profile_stats")
+	dir, err := ioutil.TempDir(os.TempDir(), "profile_stats_asset")
 	if err != nil {
 		return "", err
 	}
@@ -263,4 +271,164 @@ func (s *Source) listGist(ctx context.Context, owner string, next func([]*github
 		opt.Page = resp.NextPage
 	}
 	return out, nil
+}
+
+func (s *Source) UploadGit(ctx context.Context, owner, repo, branch, name string, r io.Reader) (string, error) {
+	giturl := "https://github.com/" + owner + "/" + repo
+
+	auth := &githttp.BasicAuth{
+		Username: owner,
+		Password: s.token,
+	}
+
+	dir, err := ioutil.TempDir(os.TempDir(), "profile_stats_git")
+	if err != nil {
+		return "", err
+	}
+	dir += dir + "/git"
+
+	remoteName := "origin-" + branch
+	refName := plumbing.NewBranchReferenceName(branch)
+	fetch := []gitconfig.RefSpec{
+		gitconfig.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%[1]s", branch, remoteName)),
+	}
+
+	var resp *git.Repository
+	_, err = os.Stat(dir + "/.git")
+	if err == nil {
+		resp, err = git.PlainOpen(dir)
+	} else {
+		resp, err = git.PlainInit(dir, false)
+	}
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", err, dir)
+	}
+	err = resp.Storer.SetReference(plumbing.NewSymbolicReference(plumbing.HEAD, refName))
+	if err != nil {
+		return "", err
+	}
+
+	remote, err := resp.Remote(remoteName)
+	if err != nil {
+		if err != git.ErrRemoteNotFound {
+			return "", err
+		}
+		c := &gitconfig.RemoteConfig{
+			Name:  remoteName,
+			URLs:  []string{giturl},
+			Fetch: fetch,
+		}
+		remote, err = resp.CreateRemote(c)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	_, err = resp.Branch(branch)
+	if err != nil {
+		if err != git.ErrBranchNotFound {
+			return "", err
+		}
+		err = resp.CreateBranch(&gitconfig.Branch{
+			Name:   branch,
+			Merge:  refName,
+			Remote: remoteName,
+		})
+		if err != nil {
+			return "", err
+		}
+		_, err = resp.Branch(branch)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	err = remote.FetchContext(ctx, &git.FetchOptions{
+		RemoteName: remoteName,
+		RefSpecs:   fetch,
+		Progress:   os.Stderr,
+		Auth:       auth,
+	})
+	if err != nil && err != git.NoErrAlreadyUpToDate {
+		if _, ok := err.(git.NoMatchingRefSpecError); !ok {
+			return "", fmt.Errorf("git fetch: %w", err)
+		}
+	}
+
+	refIter, err := resp.Storer.IterReferences()
+	if err != nil {
+		return "", fmt.Errorf("iterReferences: %w", err)
+	}
+	ref, err := refIter.Next()
+	if err != nil {
+		return "", fmt.Errorf("next: %w", err)
+	}
+	if !ref.Hash().IsZero() {
+		err = resp.Storer.SetReference(plumbing.NewHashReference(refName, ref.Hash()))
+		if err != nil {
+			return "", fmt.Errorf("setReference: %w", err)
+		}
+
+		work, err := resp.Worktree()
+		if err != nil {
+			return "", err
+		}
+		err = work.Reset(&git.ResetOptions{
+			Commit: ref.Hash(),
+			Mode:   git.HardReset,
+		})
+		if err != nil {
+			return "", fmt.Errorf("git reset: %w", err)
+		}
+	}
+
+	fname := filepath.Join(dir, name)
+	f, err := os.OpenFile(fname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(f, r)
+	if err != nil {
+		f.Close()
+		return "", err
+	}
+	f.Close()
+
+	work, err := resp.Worktree()
+	if err != nil {
+		return "", err
+	}
+	_, err = work.Add(name)
+	if err != nil {
+		return "", fmt.Errorf("git add: %w", err)
+	}
+	status, err := work.Status()
+	if err != nil {
+		return "", err
+	}
+
+	if len(status) != 0 &&
+		status[name] != nil &&
+		(status[name].Staging != git.Unmodified || status[name].Worktree != git.Unmodified) {
+		now := time.Now()
+		_, err = work.Commit(fmt.Sprintf("Automatic update %s", now.Format(time.RFC3339)), &git.CommitOptions{
+			Author: &object.Signature{
+				Name: "bot",
+				When: now,
+			},
+		})
+		if err != nil {
+			return "", fmt.Errorf("git commit: %w", err)
+		}
+		err = resp.PushContext(ctx, &git.PushOptions{
+			Auth:       auth,
+			RemoteName: remoteName,
+			Progress:   os.Stderr,
+		})
+		if err != nil {
+			return "", fmt.Errorf("git push: %w", err)
+		}
+	}
+
+	return giturl + "/raw/" + branch + "/" + name, nil
 }
