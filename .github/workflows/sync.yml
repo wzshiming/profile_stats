@@ -1,0 +1,31 @@
+name: Sync stats
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  schedule:
+    - cron: "0 */6 * * *"
+
+jobs:
+  sync:
+    name: Sync stats
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+
+    - name: Generate
+      run: go run -v ./cmd/push
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        GH_ID: wzshiming
+        GIT_OWNER: wzshiming
+        GIT_REPO: profile_stats
+        GIT_BRANCH: gh-pages
