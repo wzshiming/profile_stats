@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzshiming/profile_stats/source"
 	"github.com/wzshiming/profile_stats/stats"
+	"github.com/wzshiming/putingh"
 )
 
 func main() {
@@ -45,7 +46,8 @@ func main() {
 
 	filename := fmt.Sprintf("%s-stats.svg", username)
 
-	u, err := src.UploadGit(ctx, owner, repo, branch, filename, buf)
+	putCli := putingh.NewPutInGH(token, putingh.Config{})
+	u, err := putCli.PutInGit(ctx, owner, repo, branch, filename, buf)
 	if err != nil {
 		log.Fatal(err)
 	}
