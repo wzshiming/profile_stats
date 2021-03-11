@@ -3,6 +3,7 @@ package source
 import (
 	"context"
 	"fmt"
+	"time"
 
 	ghv3 "github.com/google/go-github/v33/github"
 	ghv4 "github.com/shurcooL/githubv4"
@@ -11,6 +12,7 @@ import (
 
 type Stat struct {
 	Name          string
+	Login         string
 	Stars         int
 	Forks         int
 	Issues        int
@@ -49,22 +51,19 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 			Contributions struct {
 				TotalCommitContributions            ghv4.Int
 				TotalPullRequestReviewContributions ghv4.Int
-			} `graphql:"contributionsCollection"`
+				TotalPullRequestContributions       ghv4.Int
+				TotalIssueContributions             ghv4.Int
+			} `graphql:"contributionsCollection(from: $from)"`
 			ContributedTo struct {
 				TotalCount ghv4.Int
 			} `graphql:"repositoriesContributedTo(first: 0)"`
-			PullRequests struct {
-				TotalCount ghv4.Int
-			} `graphql:"pullRequests(first: 0)"`
-			Issues struct {
-				TotalCount ghv4.Int
-			} `graphql:"issues(first: 0)"`
-			// Login ghv4.String
-			Name ghv4.String
+			Login ghv4.String
+			Name  ghv4.String
 		} `graphql:"user(login: $username)"`
 	}
-
+	now := time.Now().UTC()
 	variables := map[string]interface{}{
+		"from":     ghv4.DateTime{now.AddDate(-1, 0, 0)},
 		"username": ghv4.String(username),
 	}
 
@@ -74,6 +73,7 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 	}
 	stat := Stat{}
 	stat.Name = string(query.User.Name)
+	stat.Login = string(query.User.Login)
 	for _, repo := range query.User.Repositories.Nodes {
 		stat.Stars += int(repo.StargazerCount)
 		if !repo.IsFork {
@@ -83,9 +83,9 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 
 	stat.Commits = int(query.User.Contributions.TotalCommitContributions)
 	stat.Reviews = int(query.User.Contributions.TotalPullRequestReviewContributions)
+	stat.PullRequests = int(query.User.Contributions.TotalPullRequestContributions)
+	stat.Issues = int(query.User.Contributions.TotalIssueContributions)
 	stat.ContributedTo = int(query.User.ContributedTo.TotalCount)
-	stat.PullRequests = int(query.User.PullRequests.TotalCount)
-	stat.Issues = int(query.User.Issues.TotalCount)
 	return &stat, nil
 }
 

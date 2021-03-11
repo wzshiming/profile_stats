@@ -2,13 +2,12 @@ package stats
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"strconv"
-	"time"
 
 	"github.com/wzshiming/profile_stats/render"
 	"github.com/wzshiming/profile_stats/source"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 type Stats struct {
@@ -42,42 +41,44 @@ func formatSourceStats(stat *source.Stat) []render.StatsItem {
 	return []render.StatsItem{
 		{
 			Id:    "stars",
-			Key:   "Total Stars",
+			Key:   "Total stars",
 			Value: formatInt(stat.Stars),
 		},
 		{
 			Id:    "forks",
-			Key:   "Total Forks",
+			Key:   "Total forks",
 			Value: formatInt(stat.Forks),
-		},
-		{
-			Id:    "issues",
-			Key:   "Total Issues",
-			Value: formatInt(stat.Issues),
-		},
-		{
-			Id:    "commits",
-			Key:   fmt.Sprintf("Total Commits (%d)", time.Now().Year()),
-			Value: formatInt(stat.Commits),
-		},
-		{
-			Id:    "reviews",
-			Key:   "Total Reviews",
-			Value: formatInt(stat.Reviews),
-		},
-		{
-			Id:    "prs",
-			Key:   "Total PRs",
-			Value: formatInt(stat.PullRequests),
 		},
 		{
 			Id:    "contributeds",
 			Key:   "Contributed to",
 			Value: formatInt(stat.ContributedTo),
 		},
+		{
+			Id:    "issues",
+			Key:   "Issues in a year",
+			Value: formatInt(stat.Issues),
+		},
+		{
+			Id:    "commits",
+			Key:   "Commits in a year",
+			Value: formatInt(stat.Commits),
+		},
+		{
+			Id:    "reviews",
+			Key:   "Reviews in a year",
+			Value: formatInt(stat.Reviews),
+		},
+		{
+			Id:    "prs",
+			Key:   "PRs in a year",
+			Value: formatInt(stat.PullRequests),
+		},
 	}
 }
 
+var fmtEn = message.NewPrinter(language.English)
+
 func formatInt(i int) string {
-	return strconv.FormatInt(int64(i), 10)
+	return fmtEn.Sprint(i)
 }
