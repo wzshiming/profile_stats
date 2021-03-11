@@ -1,15 +1,12 @@
 package render
 
 import (
-	"embed"
 	"io"
 	"log"
 	"text/template"
 )
 
 var (
-	//go:embed placeholder
-	placeHolderResource embed.FS
 	placeHolderTemplate *template.Template
 )
 
@@ -17,7 +14,7 @@ func init() {
 	var err error
 	placeHolderTemplate, err = template.New("_").
 		Funcs(funcs).
-		ParseFS(placeHolderResource, "placeholder/layouts/*.svg", "placeholder/themes/*.css")
+		ParseFS(resource, "placeholder/layouts/*.svg", "placeholder/themes/*.css")
 	if err != nil {
 		log.Fatal(err)
 	}

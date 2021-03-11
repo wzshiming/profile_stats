@@ -1,15 +1,12 @@
 package render
 
 import (
-	"embed"
 	"io"
 	"log"
 	"text/template"
 )
 
 var (
-	//go:embed stats
-	statsResource embed.FS
 	statsTemplate *template.Template
 )
 
@@ -17,7 +14,7 @@ func init() {
 	var err error
 	statsTemplate, err = template.New("_").
 		Funcs(funcs).
-		ParseFS(statsResource, "stats/layouts/*.svg", "stats/themes/*.css")
+		ParseFS(resource, "stats/layouts/*.svg", "stats/themes/*.css")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +59,7 @@ func StatsRender(w io.Writer, data StatsData) error {
 	}
 	for i, item := range data.Items {
 		if item.IconData == "" && item.Id != "" {
-			f, err := statsResource.ReadFile("stats/icons/" + item.Id + ".svg")
+			f, err := resource.ReadFile("icons/" + item.Id + ".svg")
 			if err != nil {
 				return err
 			}
