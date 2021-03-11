@@ -12,7 +12,6 @@ import (
 
 type Stat struct {
 	Name          string
-	Login         string
 	Stars         int
 	Forks         int
 	Issues        int
@@ -20,6 +19,15 @@ type Stat struct {
 	Reviews       int
 	PullRequests  int
 	ContributedTo int
+}
+
+type OrgStat struct {
+	Name         string
+	LogoURL      string
+	Issues       int
+	Commits      int
+	Reviews      int
+	PullRequests int
 }
 
 func NewSource(token string) *Source {
@@ -38,7 +46,7 @@ type Source struct {
 	cliv4 *ghv4.Client
 }
 
-func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
+func (s *Source) Stat(ctx context.Context, username string) (*Stat, error) {
 	var query struct {
 		User struct {
 			Repositories struct {
@@ -57,8 +65,7 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 			ContributedTo struct {
 				TotalCount ghv4.Int
 			} `graphql:"repositoriesContributedTo(first: 0)"`
-			Login ghv4.String
-			Name  ghv4.String
+			Name ghv4.String
 		} `graphql:"user(login: $username)"`
 	}
 	now := time.Now().UTC()
@@ -67,13 +74,12 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 		"username": ghv4.String(username),
 	}
 
-	err := s.cliv4.Query(ctc, &query, variables)
+	err := s.cliv4.Query(ctx, &query, variables)
 	if err != nil {
 		return nil, err
 	}
 	stat := Stat{}
 	stat.Name = string(query.User.Name)
-	stat.Login = string(query.User.Login)
 	for _, repo := range query.User.Repositories.Nodes {
 		stat.Stars += int(repo.StargazerCount)
 		if !repo.IsFork {
@@ -86,6 +92,45 @@ func (s *Source) Stat(ctc context.Context, username string) (*Stat, error) {
 	stat.PullRequests = int(query.User.Contributions.TotalPullRequestContributions)
 	stat.Issues = int(query.User.Contributions.TotalIssueContributions)
 	stat.ContributedTo = int(query.User.ContributedTo.TotalCount)
+	return &stat, nil
+}
+
+func (s *Source) OrgStat(ctx context.Context, username string, org string) (*OrgStat, error) {
+	// Can't got Organization ID in API v4
+	o, _, err := s.cliv3.Organizations.Get(ctx, org)
+	if err != nil {
+		return nil, err
+	}
+	var query struct {
+		User struct {
+			Contributions struct {
+				TotalCommitContributions            ghv4.Int
+				TotalPullRequestReviewContributions ghv4.Int
+				TotalPullRequestContributions       ghv4.Int
+				TotalIssueContributions             ghv4.Int
+			} `graphql:"contributionsCollection(from: $from, organizationID: $orgID)"`
+		} `graphql:"user(login: $username)"`
+	}
+
+	now := time.Now().UTC()
+	variables := map[string]interface{}{
+		"from":     ghv4.DateTime{now.AddDate(-1, 0, 0)},
+		"orgID":    ghv4.ID(*o.NodeID),
+		"username": ghv4.String(username),
+	}
+
+	err = s.cliv4.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	stat := OrgStat{}
+	stat.LogoURL = *o.AvatarURL
+	stat.Name = *o.Name
+	stat.Commits = int(query.User.Contributions.TotalCommitContributions)
+	stat.Reviews = int(query.User.Contributions.TotalPullRequestReviewContributions)
+	stat.PullRequests = int(query.User.Contributions.TotalPullRequestContributions)
+	stat.Issues = int(query.User.Contributions.TotalIssueContributions)
 	return &stat, nil
 }
 
