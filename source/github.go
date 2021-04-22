@@ -3,12 +3,15 @@ package source
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	ghv3 "github.com/google/go-github/v33/github"
 	ghv4 "github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
+
+const MaxPageSize = 100
 
 type Stat struct {
 	Name          string
@@ -142,4 +145,162 @@ func (s *Source) CommitCounter(ctx context.Context, username string) (int, error
 		return 0, err
 	}
 	return *result.Total, nil
+}
+
+type PullRequest struct {
+	Username     string
+	Title        string
+	URL          *url.URL
+	BaseRef      string
+	State        string
+	Additions    int
+	Deletions    int
+	Commits      int
+	ChangedFiles int
+	ChangeSize   string
+	CreatedAt    time.Time
+	ClosedAt     time.Time
+	MergedAt     time.Time
+	UpdatedAt    time.Time
+	Labels       []string
+}
+
+func (s *Source) PullRequests(ctx context.Context, username string, states []PullRequestState, orderField IssueOrderField, orderDirection OrderDirection, size int) ([]*PullRequest, error) {
+	var pageSize = MaxPageSize
+	if size >= 0 && pageSize > size {
+		pageSize = size
+	}
+	if len(states) == 0 {
+		states = []PullRequestState{PullRequestStateOpen}
+	}
+
+	orderBy := ghv4.IssueOrder{
+		Field:     orderField,
+		Direction: orderDirection,
+	}
+	type pr struct {
+		Author struct {
+			Login ghv4.String
+		}
+		Title        ghv4.String
+		URL          ghv4.URI
+		BaseRefName  ghv4.String
+		State        ghv4.PullRequestState
+		Additions    ghv4.Int
+		Deletions    ghv4.Int
+		ChangedFiles ghv4.Int
+		CreatedAt    ghv4.DateTime
+		ClosedAt     ghv4.DateTime
+		MergedAt     ghv4.DateTime
+		UpdatedAt    ghv4.DateTime
+		Commits      struct {
+			TotalCount ghv4.Int
+		}
+		Labels struct {
+			TotalCount ghv4.Int
+			Nodes      []struct {
+				Name ghv4.String
+			}
+		} `graphql:"labels(first: 100)"`
+	}
+
+	conv := func(r *pr) *PullRequest {
+		p := PullRequest{
+			Username:     string(r.Author.Login),
+			Title:        string(r.Title),
+			URL:          r.URL.URL,
+			BaseRef:      string(r.BaseRefName),
+			State:        string(r.State),
+			Additions:    int(r.Additions),
+			Deletions:    int(r.Deletions),
+			ChangedFiles: int(r.ChangedFiles),
+			ChangeSize:   changeSize(int(r.Additions + r.Deletions)),
+			Commits:      int(r.Commits.TotalCount),
+			CreatedAt:    r.CreatedAt.Time,
+			ClosedAt:     r.ClosedAt.Time,
+			MergedAt:     r.MergedAt.Time,
+			UpdatedAt:    r.UpdatedAt.Time,
+		}
+		if len(r.Labels.Nodes) != 0 {
+			labels := make([]string, 0, len(r.Labels.Nodes))
+			for _, label := range r.Labels.Nodes {
+				labels = append(labels, string(label.Name))
+			}
+			p.Labels = labels
+		}
+		return &p
+	}
+	var query struct {
+		User struct {
+			PullRequests struct {
+				TotalCount ghv4.Int
+				PageInfo   struct {
+					HasNextPage ghv4.Boolean
+					EndCursor   ghv4.String
+				}
+				Nodes []pr
+			} `graphql:"pullRequests(first: $size, states: $states, after: $after, orderBy: $orderBy)"`
+		} `graphql:"user(login: $username)"`
+	}
+	variables := map[string]interface{}{
+		"username": ghv4.String(username),
+		"states":   states,
+		"size":     ghv4.Int(pageSize),
+		"after":    (*ghv4.String)(nil),
+		"orderBy":  orderBy,
+	}
+	err := s.cliv4.Query(ctx, &query, variables)
+	if err != nil {
+		return nil, err
+	}
+
+	count := int(query.User.PullRequests.TotalCount)
+	next := bool(query.User.PullRequests.PageInfo.HasNextPage)
+	cursor := string(query.User.PullRequests.PageInfo.EndCursor)
+	prs := make([]*PullRequest, 0, count)
+	for _, r := range query.User.PullRequests.Nodes {
+		prs = append(prs, conv(&r))
+	}
+
+	for next && cursor != "" &&
+		(size < 0 || len(prs) < size) {
+		pageSize := pageSize
+		if size >= 0 && pageSize+len(prs) > size {
+			pageSize = size - len(prs)
+		}
+		variables := map[string]interface{}{
+			"username": ghv4.String(username),
+			"states":   states,
+			"size":     ghv4.Int(pageSize),
+			"after":    ghv4.String(cursor),
+			"orderBy":  orderBy,
+		}
+		err := s.cliv4.Query(ctx, &query, variables)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range query.User.PullRequests.Nodes {
+			prs = append(prs, conv(&r))
+		}
+		next = bool(query.User.PullRequests.PageInfo.HasNextPage)
+		cursor = string(query.User.PullRequests.PageInfo.EndCursor)
+	}
+	return prs, nil
+}
+
+func changeSize(i int) string {
+	switch {
+	case i < 10:
+		return "XS"
+	case i < 30:
+		return "S"
+	case i < 100:
+		return "M"
+	case i < 500:
+		return "L"
+	case i < 1000:
+		return "XL"
+	default:
+		return "XXL"
+	}
 }
