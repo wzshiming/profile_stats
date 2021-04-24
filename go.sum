@@ -157,8 +157,10 @@ github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a/go.mod h1:AuYgA5K
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.4.0 h1:2E4SXV/wtOkTonXsotYi4li6zVWxYlZuYNCXe9XRJyk=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
-github.com/wzshiming/putingh v0.1.0 h1:TaigUlGAng7AXy8dYt+vyrEXqOOES29LjRwWrBTZGhk=
-github.com/wzshiming/putingh v0.1.0/go.mod h1:IHBoiFo0EpQiJSBLHTqYM45siNarIZL19XJIqfOiXUs=
+github.com/wzshiming/putingh v0.4.1 h1:5+yu3rrWox9cfWbxxImZXJEp2C6Y1PpJJK9UQcgnUhU=
+github.com/wzshiming/putingh v0.4.1/go.mod h1:IHBoiFo0EpQiJSBLHTqYM45siNarIZL19XJIqfOiXUs=
+github.com/wzshiming/xmlinjector v0.1.0 h1:IZZUZQGvYMOj1IrRc4X6WiryFDSmqfFFuVHMkozmfD0=
+github.com/wzshiming/xmlinjector v0.1.0/go.mod h1:adSzvejYcmaY2LrUMiEc1nkQWR7exHQSZDGpP2EVdlM=
 github.com/xanzy/ssh-agent v0.2.1 h1:TCbipTQL2JiiCprBWx9frJ2eJlCYT00NmctrHxVAr70=
 github.com/xanzy/ssh-agent v0.2.1/go.mod h1:mLlQY/MoOhWBj+gOGMQkOeiEvkx+8pJSI+0Bx9h2kr4=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
