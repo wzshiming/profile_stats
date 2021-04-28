@@ -3,20 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"os"
-	"reflect"
-	"time"
+	"strings"
 
-	"github.com/wzshiming/profile_stats/activities"
+	"github.com/wzshiming/profile_stats/generator"
 	"github.com/wzshiming/profile_stats/source"
-	"github.com/wzshiming/profile_stats/stats"
 	"github.com/wzshiming/putingh"
-	"github.com/wzshiming/xmlinjector"
 )
-
-var key = []byte("PROFILE_STATS")
 
 func main() {
 	ctx := context.Background()
@@ -29,61 +23,37 @@ func Update(ctx context.Context, token string, uris ...string) {
 	buf := bytes.NewBuffer(nil)
 	putCli := putingh.NewPutInGH(token, putingh.Config{})
 	src := source.NewSource(token)
+	regi := generator.NewHandler(src)
 	for _, uri := range uris {
 		buf.Reset()
-		r, err := putCli.GetFrom(ctx, uri)
-		if err != nil {
-			log.Println(err, uri)
-			continue
-		}
-		_, err = buf.ReadFrom(r)
-		if err != nil {
-			log.Println(err, uri)
-			continue
+		local := !strings.Contains(uri, ":/")
+		if local {
+			f, err := os.Open(uri)
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
+			_, err = buf.ReadFrom(f)
+			f.Close()
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
+		} else {
+			r, err := putCli.GetFrom(ctx, uri)
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
+			_, err = buf.ReadFrom(r)
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
 		}
 
 		origin := buf.Bytes()
-		data, err := xmlinjector.Inject(key, origin, func(args, origin []byte) []byte {
-			tag := reflect.StructTag(args)
-			template, ok := tag.Lookup("template")
-			if !ok || template == "" {
-				return errInfo("no template")
-			}
-
-			switch template {
-			default:
-				return errInfo(fmt.Sprintf("not support template %q", template))
-			case "updatedat":
-				return []byte(time.Now().Format(time.RFC3339))
-			case "activities":
-				username, ok := tag.Lookup("username")
-				if !ok || username == "" {
-					return errInfo("no username")
-				}
-				activity := activities.NewActivities(src)
-				buf := bytes.NewBuffer([]byte("\n"))
-				err = activity.Get(ctx, buf, username)
-				if err != nil {
-					return errInfo(err.Error())
-				}
-				buf.WriteByte('\n')
-				return buf.Bytes()
-			case "stats":
-				username, ok := tag.Lookup("username")
-				if !ok || username == "" {
-					return errInfo("no username")
-				}
-				stat := stats.NewStats(src)
-				buf := bytes.NewBuffer([]byte("\n"))
-				err = stat.Get(ctx, buf, username)
-				if err != nil {
-					return errInfo(err.Error())
-				}
-				buf.WriteByte('\n')
-				return buf.Bytes()
-			}
-		})
-
+		data, err := regi.Handle(ctx, origin)
 		if err != nil {
 			log.Println(err, uri)
 			continue
@@ -94,16 +64,21 @@ func Update(ctx context.Context, token string, uris ...string) {
 			continue
 		}
 
-		out, err := putCli.PutIn(ctx, uri, bytes.NewBuffer(data))
-		if err != nil {
-			log.Println(err, uri)
-			continue
+		if local {
+			err = os.WriteFile(uri, data, 0666)
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
+			log.Printf("updated %s", uri)
+		} else {
+			out, err := putCli.PutIn(ctx, uri, bytes.NewBuffer(data))
+			if err != nil {
+				log.Println(err, uri)
+				continue
+			}
+			log.Printf("updated %s: %s", uri, out)
 		}
-		log.Printf("updated %s: %s", uri, out)
 	}
 	return
-}
-
-func errInfo(msg string) []byte {
-	return []byte(fmt.Sprintf("\n<!-- error: %s ->\n", msg))
 }

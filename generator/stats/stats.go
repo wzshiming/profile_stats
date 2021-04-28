@@ -2,8 +2,10 @@ package stats
 
 import (
 	"context"
+	"fmt"
 	"io"
 
+	"github.com/wzshiming/profile_stats"
 	"github.com/wzshiming/profile_stats/render"
 	"github.com/wzshiming/profile_stats/source"
 	"golang.org/x/text/language"
@@ -18,6 +20,14 @@ func NewStats(src *source.Source) *Stats {
 	return &Stats{
 		source: src,
 	}
+}
+
+func (s *Stats) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) error {
+	username, ok := args.Lookup("username")
+	if !ok || username == "" {
+		return fmt.Errorf("no username")
+	}
+	return s.Get(ctx, w, username)
 }
 
 func (s *Stats) Get(ctx context.Context, w io.Writer, username string, handles ...HandleStatsData) error {

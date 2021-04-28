@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/wzshiming/profile_stats"
 	"github.com/wzshiming/profile_stats/render"
 	"github.com/wzshiming/profile_stats/source"
 )
@@ -21,8 +22,16 @@ func NewActivities(src *source.Source) *Activities {
 	}
 }
 
-func (s *Activities) Get(ctx context.Context, w io.Writer, username string, handles ...HandleActivitiesData) error {
-	stat, err := s.source.PullRequests(ctx, username,
+func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) error {
+	username, ok := args.Lookup("username")
+	if !ok || username == "" {
+		return fmt.Errorf("no username")
+	}
+	return a.Get(ctx, w, username)
+}
+
+func (a *Activities) Get(ctx context.Context, w io.Writer, username string, handles ...HandleActivitiesData) error {
+	stat, err := a.source.PullRequests(ctx, username,
 		[]source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged},
 		source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, 50)
 	if err != nil {
