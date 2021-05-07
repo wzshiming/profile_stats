@@ -23,29 +23,30 @@ func NewStats(src *source.Source) *Stats {
 }
 
 func (s *Stats) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) error {
-	username, ok := args.Lookup("username")
+	username, ok := args.String("username")
 	if !ok || username == "" {
 		return fmt.Errorf("no username")
 	}
-	return s.Get(ctx, w, username)
+
+	title, ok := args.String("title")
+	if !ok {
+		title = username + "'s Stats"
+	}
+
+	return s.Get(ctx, w, title, username)
 }
 
-func (s *Stats) Get(ctx context.Context, w io.Writer, username string, handles ...HandleStatsData) error {
+func (s *Stats) Get(ctx context.Context, w io.Writer, title, username string) error {
 	stat, err := s.source.Stat(ctx, username)
 	if err != nil {
 		return err
 	}
 	data := render.StatsData{
-		Title: stat.Name + "'s Stats",
+		Title: title,
 		Items: formatSourceStats(stat),
-	}
-	for _, handle := range handles {
-		handle(&data)
 	}
 	return render.StatsRender(w, data)
 }
-
-type HandleStatsData func(s *render.StatsData)
 
 func formatSourceStats(stat *source.Stat) []render.StatsItem {
 	return []render.StatsItem{

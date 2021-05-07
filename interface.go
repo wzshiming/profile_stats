@@ -6,8 +6,8 @@ import (
 )
 
 type Args interface {
-	Lookup(name string) (string, bool)
-	Get(name string) string
+	String(name string) (string, bool)
+	Int(name string) (int, bool)
 }
 
 type Generator interface {

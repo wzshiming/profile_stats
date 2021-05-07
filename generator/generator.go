@@ -43,8 +43,8 @@ func (r *Handler) register(name string, generator profile_stats.Generator) {
 func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	return xmlinjector.Inject(key, origin, func(args, origin []byte) []byte {
-		tag := reflect.StructTag(args)
-		template, ok := tag.Lookup("template")
+		tag := NewArgs(reflect.StructTag(args))
+		template, ok := tag.String("template")
 		if !ok || template == "" {
 			return errInfo("no template")
 		}

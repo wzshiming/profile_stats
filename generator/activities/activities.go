@@ -23,31 +23,57 @@ func NewActivities(src *source.Source) *Activities {
 }
 
 func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) error {
-	username, ok := args.Lookup("username")
+	username, ok := args.String("username")
 	if !ok || username == "" {
 		return fmt.Errorf("no username")
 	}
-	return a.Get(ctx, w, username)
+
+	title, ok := args.String("title")
+	if !ok {
+		title = username + "'s Activities"
+	}
+
+	size, ok := args.Int("size")
+	if !ok {
+		size = 100
+	}
+
+	var states []source.PullRequestState
+	statesRaw, ok := args.String("states")
+	if ok {
+		statesSlice := strings.Split(statesRaw, ",")
+		states = make([]source.PullRequestState, 0, len(statesSlice))
+		for _, state := range statesSlice {
+			s := source.PullRequestState(strings.ToUpper(state))
+			switch s {
+			default:
+				return fmt.Errorf("can't support %q", state)
+			case source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged:
+			}
+			states = append(states, s)
+		}
+	}
+	if len(states) == 0 {
+		states = []source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged}
+	}
+
+	return a.Get(ctx, w, title, username, size, states)
 }
 
-func (a *Activities) Get(ctx context.Context, w io.Writer, username string, handles ...HandleActivitiesData) error {
+func (a *Activities) Get(ctx context.Context, w io.Writer, title, username string, size int, states []source.PullRequestState) error {
 	stat, err := a.source.PullRequests(ctx, username,
-		[]source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged},
-		source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, 50)
+		states,
+		source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size)
 	if err != nil {
 		return err
 	}
 	data := render.ActivitiesData{
-		Title: username + "'s Activities",
+		Title: title,
 		Items: formatSourceActivities(stat),
 	}
-	for _, handle := range handles {
-		handle(&data)
-	}
+
 	return render.ActivitiesRender(w, data)
 }
-
-type HandleActivitiesData func(s *render.ActivitiesData)
 
 func formatSourceActivities(prs []*source.PullRequest) []render.ActivitiesItem {
 	items := make([]render.ActivitiesItem, 0, len(prs))
