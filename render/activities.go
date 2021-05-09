@@ -31,6 +31,7 @@ type ActivitiesItem struct {
 	Status       string
 	IconData     string
 	URL          string
+	Username     string
 	Link         string
 	Title        string
 	BaseRef      string

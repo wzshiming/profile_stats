@@ -101,6 +101,7 @@ func formatSourceActivities(prs []*source.PullRequest) []render.ActivitiesItem {
 
 		item := render.ActivitiesItem{
 			URL:          pr.URL.String(),
+			Username:     pr.Username,
 			Link:         fmt.Sprintf("%s#%s", ref, index),
 			Title:        pr.Title,
 			BaseRef:      pr.BaseRef,
