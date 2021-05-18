@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -12,6 +13,8 @@ import (
 	"github.com/wzshiming/putingh"
 )
 
+const selfRepo = "https://github.com/wzshiming/profile_stats"
+
 func main() {
 	ctx := context.Background()
 	token := os.Getenv("GH_TOKEN")
@@ -20,8 +23,16 @@ func main() {
 }
 
 func Update(ctx context.Context, token string, uris ...string) {
+	putCli := putingh.NewPutInGH(token,
+		putingh.WithGitCommitMessage(func(owner, repo, branch, name, path string) string {
+			return fmt.Sprintf(`Automatic update %s
+
+For details see %s
+`, name, selfRepo)
+		}),
+	)
+
 	buf := bytes.NewBuffer(nil)
-	putCli := putingh.NewPutInGH(token, putingh.Config{})
 	src := source.NewSource(token)
 	regi := generator.NewHandler(src)
 	for _, uri := range uris {
