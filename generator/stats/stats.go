@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/wzshiming/profile_stats"
-	"github.com/wzshiming/profile_stats/render"
+	"github.com/wzshiming/profile_stats/generator/stats/render"
 	"github.com/wzshiming/profile_stats/source"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"

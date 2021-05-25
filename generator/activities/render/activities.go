@@ -1,21 +1,28 @@
 package render
 
 import (
+	"embed"
 	"io"
 	"log"
 	"text/template"
 	"time"
+
+	"github.com/wzshiming/profile_stats/generator/common"
+	"github.com/wzshiming/profile_stats/render"
 )
 
 var (
 	activitiesTemplate *template.Template
 )
 
+//go:embed layouts
+var resource embed.FS
+
 func init() {
 	var err error
 	activitiesTemplate, err = template.New("_").
-		Funcs(funcs).
-		ParseFS(resource, "activities/layouts/*.md")
+		Funcs(render.Funcs).
+		ParseFS(resource, "layouts/*.md")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,7 +61,7 @@ func ActivitiesRender(w io.Writer, data ActivitiesData) error {
 
 	for i, item := range data.Items {
 		if item.IconData == "" && item.Status != "" {
-			f, err := resource.ReadFile("icons/" + item.Status + ".svg")
+			f, err := common.Resource.ReadFile("icons/" + item.Status + ".svg")
 			if err != nil {
 				return err
 			}
@@ -62,8 +69,6 @@ func ActivitiesRender(w io.Writer, data ActivitiesData) error {
 		}
 	}
 
-	w = &compressedSpacesWriter{
-		writer: w,
-	}
+	w = render.NewCompressedSpacesWriter(w)
 	return activitiesTemplate.ExecuteTemplate(w, data.Layout+".md", data)
 }

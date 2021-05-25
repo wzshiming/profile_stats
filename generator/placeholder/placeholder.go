@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/wzshiming/profile_stats"
-	"github.com/wzshiming/profile_stats/render"
+	"github.com/wzshiming/profile_stats/generator/placeholder/render"
 )
 
 type PlaceHolder struct {

@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-var funcs = template.FuncMap{
+var Funcs = template.FuncMap{
 	"add":    add,
 	"sub":    sub,
 	"mul":    mul,
@@ -85,14 +85,20 @@ var poolBuffer = sync.Pool{
 	},
 }
 
-func getBuffer() *strings.Builder {
+func GetBuffer() *strings.Builder {
 	buf := poolBuffer.Get().(*strings.Builder)
 	buf.Reset()
 	return buf
 }
 
-func putBuffer(buf *strings.Builder) {
+func PutBuffer(buf *strings.Builder) {
 	poolBuffer.Put(buf)
+}
+
+func NewCompressedSpacesWriter(w io.Writer) io.Writer {
+	return &compressedSpacesWriter{
+		writer: w,
+	}
 }
 
 type compressedSpacesWriter struct {

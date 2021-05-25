@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/wzshiming/profile_stats"
-	"github.com/wzshiming/profile_stats/render"
+	"github.com/wzshiming/profile_stats/generator/activities/render"
 	"github.com/wzshiming/profile_stats/source"
 )
 

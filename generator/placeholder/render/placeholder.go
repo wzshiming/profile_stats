@@ -1,20 +1,27 @@
 package render
 
 import (
+	"embed"
 	"io"
 	"log"
 	"text/template"
+
+	"github.com/wzshiming/profile_stats/render"
 )
 
 var (
 	placeHolderTemplate *template.Template
 )
 
+//go:embed layouts
+//go:embed themes
+var resource embed.FS
+
 func init() {
 	var err error
 	placeHolderTemplate, err = template.New("_").
-		Funcs(funcs).
-		ParseFS(resource, "placeholder/layouts/*.svg", "placeholder/themes/*.css")
+		Funcs(render.Funcs).
+		ParseFS(resource, "layouts/*.svg", "themes/*.css")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,18 +57,16 @@ func PlaceHolderRender(w io.Writer, data PlaceHolderData) error {
 	}
 
 	if data.CSS == "" {
-		buf := getBuffer()
+		buf := render.GetBuffer()
 		err := placeHolderTemplate.ExecuteTemplate(buf, data.Theme+".css", data)
 		if err != nil {
-			putBuffer(buf)
+			render.PutBuffer(buf)
 			return err
 		}
 		data.CSS = buf.String()
-		putBuffer(buf)
+		render.PutBuffer(buf)
 	}
 
-	w = &compressedSpacesWriter{
-		writer: w,
-	}
+	w = render.NewCompressedSpacesWriter(w)
 	return placeHolderTemplate.ExecuteTemplate(w, data.Layout+".svg", data)
 }
