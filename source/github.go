@@ -3,11 +3,13 @@ package source
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
 	ghv3 "github.com/google/go-github/v33/github"
 	ghv4 "github.com/shurcooL/githubv4"
+	"github.com/wzshiming/httpcache"
 	"golang.org/x/oauth2"
 )
 
@@ -33,14 +35,50 @@ type OrgStat struct {
 	PullRequests int
 }
 
-func NewSource(token string) *Source {
+func NewSource(token string, cache string) *Source {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
-	httpClient := oauth2.NewClient(context.Background(), src)
+	ctx := context.Background()
+	httpClient := oauth2.NewClient(ctx, src)
+
+	opts := []httpcache.Option{}
+	if cache != "" {
+		opts = append(opts, httpcache.WithStorer(httpcache.DirectoryStorer(cache)))
+	}
+
 	return &Source{
-		cliv3: ghv3.NewClient(httpClient),
-		cliv4: ghv4.NewClient(httpClient),
+		cliv3: ghv3.NewClient(&http.Client{
+			Transport: httpcache.NewRoundTripper(httpClient.Transport,
+				append([]httpcache.Option{
+					httpcache.WithFilterer(
+						httpcache.MethodFilterer(http.MethodGet),
+					),
+					httpcache.WithKeyer(
+						httpcache.JointKeyer(
+							httpcache.MethodKeyer(),
+							httpcache.PathKeyer(),
+						),
+					),
+				}, opts...)...,
+			),
+		}),
+		cliv4: ghv4.NewClient(&http.Client{
+			Transport: httpcache.NewRoundTripper(httpClient.Transport,
+				append([]httpcache.Option{
+					httpcache.WithFilterer(
+						httpcache.MethodFilterer(http.MethodPost),
+					),
+					httpcache.WithKeyer(
+						httpcache.JointKeyer(
+							httpcache.MethodKeyer(),
+							httpcache.PathKeyer(),
+							httpcache.BodyKeyer(),
+						),
+					),
+				}, opts...)...,
+			),
+		}),
 	}
 }
 

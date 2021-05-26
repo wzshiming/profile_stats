@@ -18,11 +18,12 @@ const selfRepo = "https://github.com/wzshiming/profile_stats"
 func main() {
 	ctx := context.Background()
 	token := os.Getenv("GH_TOKEN")
+	tmp := os.Getenv("TMP_DIR")
 	uris := os.Args[1:]
-	Update(ctx, token, uris...)
+	Update(ctx, token, tmp, uris...)
 }
 
-func Update(ctx context.Context, token string, uris ...string) {
+func Update(ctx context.Context, token, tmp string, uris ...string) {
 	putCli := putingh.NewPutInGH(token,
 		putingh.WithGitCommitMessage(func(owner, repo, branch, name, path string) string {
 			return fmt.Sprintf(`Automatic update %s
@@ -33,7 +34,7 @@ For details see %s
 	)
 
 	buf := bytes.NewBuffer(nil)
-	src := source.NewSource(token)
+	src := source.NewSource(token, tmp)
 	regi := generator.NewHandler(src)
 	for _, uri := range uris {
 		buf.Reset()
