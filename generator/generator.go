@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/wzshiming/profile_stats"
@@ -47,7 +46,7 @@ func (r *Handler) register(name string, generator profile_stats.Generator) {
 func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, error) {
 	buf := bytes.NewBuffer(nil)
 	return xmlinjector.Inject([]byte(key), origin, func(args, origin []byte) []byte {
-		tag := NewArgs(reflect.StructTag(args))
+		tag := NewArgs(string(args), true)
 		template, ok := tag.String("template")
 		if !ok || template == "" {
 			return errInfo("no template", origin)
