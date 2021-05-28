@@ -203,7 +203,9 @@ type PullRequest struct {
 	Labels       []string
 }
 
-func (s *Source) PullRequests(ctx context.Context, username string, states []PullRequestState, orderField IssueOrderField, orderDirection OrderDirection, size int) ([]*PullRequest, error) {
+type PullRequestCallback func(pr *PullRequest) bool
+
+func (s *Source) PullRequests(ctx context.Context, username string, states []PullRequestState, orderField IssueOrderField, orderDirection OrderDirection, size int, cbs ...PullRequestCallback) ([]*PullRequest, error) {
 	var pageSize = MaxPageSize
 	if size >= 0 && pageSize > size {
 		pageSize = size
@@ -297,7 +299,15 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 	cursor := string(query.User.PullRequests.PageInfo.EndCursor)
 	prs := make([]*PullRequest, 0, count)
 	for _, r := range query.User.PullRequests.Nodes {
-		prs = append(prs, conv(&r))
+		pr := conv(&r)
+		if len(cbs) != 0 {
+			for _, cb := range cbs {
+				if !cb(pr) {
+					return prs, nil
+				}
+			}
+		}
+		prs = append(prs, pr)
 	}
 
 	for next && cursor != "" &&
@@ -318,7 +328,15 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 			return nil, err
 		}
 		for _, r := range query.User.PullRequests.Nodes {
-			prs = append(prs, conv(&r))
+			pr := conv(&r)
+			if len(cbs) != 0 {
+				for _, cb := range cbs {
+					if !cb(pr) {
+						return prs, nil
+					}
+				}
+			}
+			prs = append(prs, pr)
 		}
 		next = bool(query.User.PullRequests.PageInfo.HasNextPage)
 		cursor = string(query.User.PullRequests.PageInfo.EndCursor)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/wzshiming/profile_stats"
 	"github.com/wzshiming/profile_stats/generator/activities"
+	"github.com/wzshiming/profile_stats/generator/charts"
 	"github.com/wzshiming/profile_stats/generator/now"
 	"github.com/wzshiming/profile_stats/generator/placeholder"
 	"github.com/wzshiming/profile_stats/generator/stats"
@@ -35,6 +36,7 @@ func NewHandler(src *source.Source) *Handler {
 	r.register("stats", placeholder.NewPlaceHolder())
 	r.register("activities", activities.NewActivities(src))
 	r.register("stats", stats.NewStats(src))
+	r.register("charts", charts.NewCharts(src))
 	return r
 }
 

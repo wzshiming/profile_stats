@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/wzshiming/profile_stats"
 	"github.com/wzshiming/profile_stats/generator/activities/render"
 	"github.com/wzshiming/profile_stats/source"
+	"github.com/wzshiming/profile_stats/utils"
 )
 
 type Activities struct {
@@ -22,21 +24,32 @@ func NewActivities(src *source.Source) *Activities {
 	}
 }
 
-func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) error {
-	username, ok := args.String("username")
-	if !ok || username == "" {
-		return fmt.Errorf("no username")
-	}
-
-	title, ok := args.String("title")
-	if !ok {
-		title = username + "'s Activities"
+func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) (err error) {
+	usernames, ok := args.String("username")
+	if !ok || usernames == "" {
+		return fmt.Errorf("no usernames")
 	}
 
 	size, ok := args.Int("size")
 	if !ok {
-		size = 100
+		size = -1
 	}
+
+	var last time.Time
+	span, ok := args.String("span")
+	if !ok {
+		span = "1years"
+	}
+	if span != "" {
+		now := time.Now()
+		last, err = utils.ParseTimeSpan(span, now)
+		if err != nil {
+			return err
+		}
+	}
+
+	repository, _ := args.String("repository")
+	branch, _ := args.String("branch")
 
 	var states []source.PullRequestState
 	statesRaw, ok := args.String("states")
@@ -57,19 +70,46 @@ func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_sta
 		states = []source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged}
 	}
 
-	return a.Get(ctx, w, title, username, size, states)
+	return a.Get(ctx, w, strings.Split(usernames, ","), size, states, repository, branch, last)
 }
 
-func (a *Activities) Get(ctx context.Context, w io.Writer, title, username string, size int, states []source.PullRequestState) error {
-	stat, err := a.source.PullRequests(ctx, username,
-		states,
-		source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size)
-	if err != nil {
-		return err
+func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time) error {
+	items := []*source.PullRequest{}
+
+	cbs := []source.PullRequestCallback{}
+	if !last.IsZero() {
+		cbs = append(cbs, func(pr *source.PullRequest) bool {
+			return pr.UpdatedAt.After(last)
+		})
 	}
+
+	sort.Strings(usernames)
+	for _, username := range usernames {
+		prs, err := a.source.PullRequests(ctx, username,
+			states,
+			source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size,
+			cbs...)
+		if err != nil {
+			return fmt.Errorf("list PullRequests %q: %w", username, err)
+		}
+
+		for _, pr := range prs {
+			if !utils.Match(branch, pr.BaseRef) {
+				continue
+			}
+			repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
+			if !utils.Match(repository, repo) {
+				continue
+			}
+			items = append(items, pr)
+		}
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+	})
 	data := render.ActivitiesData{
-		Title: title,
-		Items: formatSourceActivities(stat),
+		Items: formatSourceActivities(items),
 	}
 
 	return render.ActivitiesRender(w, data)
