@@ -79,7 +79,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 	cbs := []source.PullRequestCallback{}
 	if !last.IsZero() {
 		cbs = append(cbs, func(pr *source.PullRequest) bool {
-			return pr.UpdatedAt.After(last)
+			return pr.CreatedAt.After(last)
 		})
 	}
 
@@ -87,13 +87,16 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 	for _, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
-			source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size,
+			source.IssueOrderFieldCreatedAt, source.OrderDirectionDesc, size,
 			cbs...)
 		if err != nil {
 			return fmt.Errorf("list PullRequests %q: %w", username, err)
 		}
 
 		for _, pr := range prs {
+			if pr.SortTime.Before(last) {
+				continue
+			}
 			if !utils.Match(branch, pr.BaseRef) {
 				continue
 			}
@@ -106,7 +109,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 	}
 
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].UpdatedAt.After(items[j].UpdatedAt)
+		return items[i].SortTime.After(items[j].UpdatedAt)
 	})
 	data := render.ActivitiesData{
 		Items: formatSourceActivities(items),

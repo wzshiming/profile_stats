@@ -201,6 +201,7 @@ type PullRequest struct {
 	MergedAt     time.Time
 	UpdatedAt    time.Time
 	Labels       []string
+	SortTime     time.Time
 }
 
 type PullRequestCallback func(pr *PullRequest) bool
@@ -260,6 +261,7 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 			ClosedAt:     r.ClosedAt.Time,
 			MergedAt:     r.MergedAt.Time,
 			UpdatedAt:    r.UpdatedAt.Time,
+			SortTime:     r.UpdatedAt.Time,
 		}
 		if len(r.Labels.Nodes) != 0 {
 			labels := make([]string, 0, len(r.Labels.Nodes))
@@ -267,6 +269,16 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 				labels = append(labels, string(label.Name))
 			}
 			p.Labels = labels
+		}
+		if len(states) == 1 {
+			switch states[0] {
+			case PullRequestStateMerged:
+				p.SortTime = p.MergedAt
+			case PullRequestStateClosed:
+				p.SortTime = p.ClosedAt
+			case PullRequestStateOpen:
+				p.SortTime = p.CreatedAt
+			}
 		}
 		return &p
 	}

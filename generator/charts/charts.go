@@ -100,14 +100,14 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 	cbs := []source.PullRequestCallback{}
 	if !last.IsZero() {
 		cbs = append(cbs, func(pr *source.PullRequest) bool {
-			return pr.UpdatedAt.After(last)
+			return pr.CreatedAt.After(last)
 		})
 	}
 	sort.Strings(usernames)
 	for _, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
-			source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size,
+			source.IssueOrderFieldCreatedAt, source.OrderDirectionDesc, size,
 			cbs...)
 		if err != nil {
 			return fmt.Errorf("list PullRequests %q: %w", username, err)
@@ -118,6 +118,9 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 
 		days := map[string]int{}
 		for _, pr := range prs {
+			if pr.SortTime.Before(last) {
+				continue
+			}
 			if !utils.Match(branch, pr.BaseRef) {
 				continue
 			}
@@ -125,21 +128,8 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			if !utils.Match(repository, repo) {
 				continue
 			}
-			var key string
-			if len(states) == 1 {
-				switch states[0] {
-				case source.PullRequestStateMerged:
-					key = pr.MergedAt.Format(render.DateFmt)
-				case source.PullRequestStateClosed:
-					key = pr.ClosedAt.Format(render.DateFmt)
-				case source.PullRequestStateOpen:
-					key = pr.CreatedAt.Format(render.DateFmt)
-				}
-			}
-			if key == "" {
-				key = pr.UpdatedAt.Format(render.DateFmt)
-			}
 
+			key := pr.SortTime.Format(render.DateFmt)
 			switch kind {
 			case KindCommits:
 				days[key] = days[key] + pr.Commits
