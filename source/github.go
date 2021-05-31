@@ -35,21 +35,50 @@ type OrgStat struct {
 	PullRequests int
 }
 
-func NewSource(token string, cache string) *Source {
+type intervalRequest struct {
+	interval      time.Duration
+	last          time.Time
+	roundTripperr http.RoundTripper
+}
+
+func newIntervalRequest(roundTripperr http.RoundTripper, interval time.Duration) http.RoundTripper {
+	if interval <= 0 {
+		return roundTripperr
+	}
+	return &intervalRequest{
+		roundTripperr: roundTripperr,
+		interval:      interval,
+	}
+}
+
+func (l *intervalRequest) RoundTrip(r *http.Request) (*http.Response, error) {
+	defer func() {
+		l.last = time.Now()
+	}()
+	now := time.Now()
+	sub := now.Sub(l.last)
+	if s := l.interval - sub; s > 0 {
+		time.Sleep(s)
+	}
+	return l.roundTripperr.RoundTrip(r)
+}
+
+func NewSource(token string, cache string, interval time.Duration) *Source {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
 	ctx := context.Background()
-	httpClient := oauth2.NewClient(ctx, src)
+	transport := oauth2.NewClient(ctx, src).Transport
 
 	opts := []httpcache.Option{}
 	if cache != "" {
 		opts = append(opts, httpcache.WithStorer(httpcache.DirectoryStorer(cache)))
 	}
 
+	transport = newIntervalRequest(transport, interval)
 	return &Source{
 		cliv3: ghv3.NewClient(&http.Client{
-			Transport: httpcache.NewRoundTripper(httpClient.Transport,
+			Transport: httpcache.NewRoundTripper(transport,
 				append([]httpcache.Option{
 					httpcache.WithFilterer(
 						httpcache.MethodFilterer(http.MethodGet),
@@ -64,7 +93,7 @@ func NewSource(token string, cache string) *Source {
 			),
 		}),
 		cliv4: ghv4.NewClient(&http.Client{
-			Transport: httpcache.NewRoundTripper(httpClient.Transport,
+			Transport: httpcache.NewRoundTripper(transport,
 				append([]httpcache.Option{
 					httpcache.WithFilterer(
 						httpcache.MethodFilterer(http.MethodPost),
