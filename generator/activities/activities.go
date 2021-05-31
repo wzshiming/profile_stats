@@ -109,7 +109,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 	}
 
 	sort.Slice(items, func(i, j int) bool {
-		return items[i].SortTime.After(items[j].UpdatedAt)
+		return items[i].SortTime.After(items[j].SortTime)
 	})
 	data := render.ActivitiesData{
 		Items: formatSourceActivities(items),
