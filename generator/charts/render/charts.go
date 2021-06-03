@@ -96,7 +96,7 @@ func ChartRender(w io.Writer, data ChartData) error {
 		if series.Name == "" {
 			continue
 		}
-		style := chart.AutoStyle(series.Index, true)
+		style := AutoStyle(series.Index)
 		points := series.Points.Values()
 		graph.AddData(series.Name, points, style)
 	}
