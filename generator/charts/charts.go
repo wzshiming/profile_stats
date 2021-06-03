@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -103,7 +104,14 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			return pr.CreatedAt.After(last)
 		})
 	}
+
+	attrs := utils.KeyAttribute(usernames)
+	usernames = usernames[:0]
+	for username, _ := range attrs {
+		usernames = append(usernames, username)
+	}
 	sort.Strings(usernames)
+
 	for _, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
@@ -116,6 +124,20 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			continue
 		}
 
+		var before, after time.Time
+		if v := attrs[username]["before"]; v != "" {
+			before, err = utils.ParseTime(v, time.Local)
+			if err != nil {
+				log.Printf("error ParseTime: %s", err)
+			}
+		}
+		if v := attrs[username]["after"]; v != "" {
+			after, err = utils.ParseTime(v, time.Local)
+			if err != nil {
+				log.Printf("error ParseTime: %s", err)
+			}
+		}
+
 		days := map[string]int{}
 		for _, pr := range prs {
 			if pr.SortTime.Before(last) {
@@ -126,6 +148,12 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			}
 			repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
 			if !utils.Match(repository, repo) {
+				continue
+			}
+			if !before.IsZero() && !pr.SortTime.Before(before) {
+				continue
+			}
+			if !after.IsZero() && !pr.SortTime.After(after) {
 				continue
 			}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -83,7 +84,13 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 		})
 	}
 
+	attrs := utils.KeyAttribute(usernames)
+	usernames = usernames[:0]
+	for username, _ := range attrs {
+		usernames = append(usernames, username)
+	}
 	sort.Strings(usernames)
+
 	for _, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
@@ -91,6 +98,20 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			cbs...)
 		if err != nil {
 			return fmt.Errorf("list PullRequests %q: %w", username, err)
+		}
+
+		var before, after time.Time
+		if v := attrs[username]["before"]; v != "" {
+			before, err = utils.ParseTime(v, time.Local)
+			if err != nil {
+				log.Printf("error ParseTime: %s", err)
+			}
+		}
+		if v := attrs[username]["after"]; v != "" {
+			after, err = utils.ParseTime(v, time.Local)
+			if err != nil {
+				log.Printf("error ParseTime: %s", err)
+			}
 		}
 
 		for _, pr := range prs {
@@ -102,6 +123,12 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			}
 			repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
 			if !utils.Match(repository, repo) {
+				continue
+			}
+			if !before.IsZero() && !pr.SortTime.Before(before) {
+				continue
+			}
+			if !after.IsZero() && !pr.SortTime.After(after) {
 				continue
 			}
 			items = append(items, pr)

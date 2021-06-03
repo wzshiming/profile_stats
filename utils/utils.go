@@ -69,3 +69,44 @@ func parseTimeSpan(span string) (y, m, d int, err error) {
 	}
 	return 0, 0, 0, fmt.Errorf("parse failure %q", span)
 }
+
+// KeyAttribute handle string, it like key:attr1=xxx:attr2=yyy
+func KeyAttribute(keys []string) map[string]map[string]string {
+	mk := map[string]map[string]string{}
+	for _, key := range keys {
+		attrs := strings.Split(key, ":")
+		ma := map[string]string{}
+		for _, attr := range attrs[1:] {
+			kv := strings.SplitN(attr, "=", 2)
+			k := kv[0]
+			var v string
+			if len(kv) > 1 {
+				v = kv[1]
+			}
+			ma[k] = v
+		}
+		mk[attrs[0]] = ma
+	}
+	return mk
+}
+
+func ParseTime(str string, loc *time.Location) (time.Time, error) {
+	const (
+		RFC3339   = time.RFC3339
+		Time      = "2006-01-02T15:04:05"
+		DateMonth = "2006-01"
+		DateDay   = "2006-01-02"
+	)
+
+	switch len(str) {
+	case len(RFC3339):
+		return time.Parse(RFC3339, str)
+	case len(Time):
+		return time.ParseInLocation(Time, str, loc)
+	case len(DateMonth):
+		return time.ParseInLocation(DateMonth, str, loc)
+	case len(DateDay):
+		return time.ParseInLocation(DateDay, str, loc)
+	}
+	return time.Time{}, fmt.Errorf("can't support %q", str)
+}
