@@ -72,6 +72,7 @@ func (p Points) Values() (points []chart.Point) {
 type Series struct {
 	Name   string
 	Points Points
+	Index  int
 }
 
 type ChartData struct {
@@ -91,11 +92,11 @@ func ChartRender(w io.Writer, data ChartData) error {
 		ShowVal:      3,
 	}
 
-	for i, series := range data.Series {
+	for _, series := range data.Series {
 		if series.Name == "" {
 			continue
 		}
-		style := chart.AutoStyle(i, true)
+		style := chart.AutoStyle(series.Index, true)
 		points := series.Points.Values()
 		graph.AddData(series.Name, points, style)
 	}

@@ -112,7 +112,7 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 	}
 	sort.Strings(usernames)
 
-	for _, username := range usernames {
+	for i, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
 			source.IssueOrderFieldCreatedAt, source.OrderDirectionDesc, size,
@@ -180,6 +180,7 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 		data.Series = append(data.Series, render.Series{
 			Name:   username,
 			Points: points,
+			Index:  i,
 		})
 	}
 
