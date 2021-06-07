@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sort"
 	"strings"
 	"time"
 
@@ -115,12 +114,7 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 		})
 	}
 
-	attrs := utils.KeyAttribute(usernames)
-	usernames = usernames[:0]
-	for username, _ := range attrs {
-		usernames = append(usernames, username)
-	}
-	sort.Strings(usernames)
+	usernames, attrs := utils.KeyAttribute(usernames)
 
 	for i, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,

@@ -71,8 +71,9 @@ func parseTimeSpan(span string) (y, m, d int, err error) {
 }
 
 // KeyAttribute handle string, it like key:attr1=xxx:attr2=yyy
-func KeyAttribute(keys []string) map[string]map[string]string {
+func KeyAttribute(keys []string) ([]string, map[string]map[string]string) {
 	mk := map[string]map[string]string{}
+	nk := make([]string, 0, len(keys))
 	for _, key := range keys {
 		attrs := strings.Split(key, ":")
 		ma := map[string]string{}
@@ -86,8 +87,9 @@ func KeyAttribute(keys []string) map[string]map[string]string {
 			ma[k] = v
 		}
 		mk[attrs[0]] = ma
+		nk = append(nk, attrs[0])
 	}
-	return mk
+	return nk, mk
 }
 
 func ParseTime(str string, loc *time.Location) (time.Time, error) {

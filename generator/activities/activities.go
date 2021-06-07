@@ -84,12 +84,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 		})
 	}
 
-	attrs := utils.KeyAttribute(usernames)
-	usernames = usernames[:0]
-	for username, _ := range attrs {
-		usernames = append(usernames, username)
-	}
-	sort.Strings(usernames)
+	usernames, attrs := utils.KeyAttribute(usernames)
 
 	for _, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
