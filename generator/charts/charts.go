@@ -87,15 +87,25 @@ func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.A
 		title = kind + " " + strings.ReplaceAll(statesRaw, ",", "/") + " in the last " + span + " in the " + repository
 	}
 
-	return a.Get(ctx, w, title, strings.Split(usernames, ","), size, states, repository, branch, last, kind)
+	width, _ := args.Int("width")
+	if width == 0 {
+		width = 1200
+	}
+
+	height, _ := args.Int("height")
+	if height == 0 {
+		height = 800
+	}
+
+	return a.Get(ctx, w, title, strings.Split(usernames, ","), size, states, repository, branch, last, kind, width, height)
 }
 
-func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time, kind string) error {
+func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time, kind string, width, height int) error {
 	data := render.ChartData{
 		Title:        title,
 		ValueMessage: kind,
-		Width:        1200,
-		Height:       800,
+		Width:        width,
+		Height:       height,
 	}
 
 	cbs := []source.PullRequestCallback{}
