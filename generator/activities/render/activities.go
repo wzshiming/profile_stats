@@ -1,42 +1,19 @@
 package render
 
 import (
-	"embed"
+	"fmt"
 	"io"
-	"log"
-	"text/template"
+	"strconv"
 	"time"
 
-	"github.com/wzshiming/profile_stats/generator/common"
-	"github.com/wzshiming/profile_stats/render"
+	"github.com/olekukonko/tablewriter"
 )
-
-var (
-	activitiesTemplate *template.Template
-)
-
-//go:embed layouts
-var resource embed.FS
-
-func init() {
-	var err error
-	activitiesTemplate, err = template.New("_").
-		Funcs(render.Funcs).
-		ParseFS(resource, "layouts/*.md")
-	if err != nil {
-		log.Fatal(err)
-	}
-}
 
 type ActivitiesData struct {
-	Layout string
-	Title  string
-	Items  []ActivitiesItem
+	Items []ActivitiesItem
 }
 
 type ActivitiesItem struct {
-	Status       string
-	IconData     string
 	URL          string
 	Username     string
 	Link         string
@@ -55,20 +32,18 @@ type ActivitiesItem struct {
 }
 
 func ActivitiesRender(w io.Writer, data ActivitiesData) error {
-	if data.Layout == "" {
-		data.Layout = "default"
+	t := make([][]string, 0, len(data.Items))
+	for _, item := range data.Items {
+		t = append(t, []string{
+			fmt.Sprintf("[%s](%s)", item.Link, item.URL), item.BaseRef, item.State, item.Username, fmt.Sprintf("%s (+%d, -%d)", item.ChangeSize, item.Additions, item.Deletions), strconv.FormatInt(int64(item.Commits), 10), strconv.FormatInt(int64(item.ChangedFiles), 10),
+		})
 	}
-
-	for i, item := range data.Items {
-		if item.IconData == "" && item.Status != "" {
-			f, err := common.Resource.ReadFile("icons/" + item.Status + ".svg")
-			if err != nil {
-				return err
-			}
-			data.Items[i].IconData = string(f)
-		}
-	}
-
-	w = render.NewCompressedSpacesWriter(w)
-	return activitiesTemplate.ExecuteTemplate(w, data.Layout+".md", data)
+	table := tablewriter.NewWriter(w)
+	table.SetAutoFormatHeaders(false)
+	table.SetHeader([]string{"Link", "Branch", "State", "Username", "Change Size", "Commits", "Change File"})
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.AppendBulk(t)
+	table.Render()
+	return nil
 }
