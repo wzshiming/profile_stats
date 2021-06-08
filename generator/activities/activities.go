@@ -126,6 +126,10 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			if !after.IsZero() && !pr.SortTime.After(after) {
 				continue
 			}
+
+			if n := attrs[username]["name"]; n != "" {
+				pr.Username = n
+			}
 			items = append(items, pr)
 		}
 	}

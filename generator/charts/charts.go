@@ -187,8 +187,12 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			})
 		}
 
+		name := username
+		if n := attrs[username]["name"]; n != "" {
+			name = n
+		}
 		data.Series = append(data.Series, render.Series{
-			Name:   username,
+			Name:   name,
 			Points: points,
 			Index:  i,
 		})
