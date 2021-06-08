@@ -96,15 +96,21 @@ func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.A
 		height = 800
 	}
 
-	return a.Get(ctx, w, title, strings.Split(usernames, ","), size, states, repository, branch, last, kind, width, height)
+	maxVal, _ := args.Int("max_value")
+	if maxVal == 0 {
+		maxVal = 49
+	}
+
+	return a.Get(ctx, w, title, strings.Split(usernames, ","), size, states, repository, branch, last, kind, width, height, maxVal)
 }
 
-func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time, kind string, width, height int) error {
+func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time, kind string, width, height, maxVal int) error {
 	data := render.ChartData{
 		Title:        title,
 		ValueMessage: kind,
 		Width:        width,
 		Height:       height,
+		MaxValue:     maxVal,
 	}
 
 	cbs := []source.PullRequestCallback{}

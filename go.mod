@@ -12,7 +12,7 @@ require (
 	github.com/wzshiming/putingh v0.5.0
 	github.com/wzshiming/xmlinjector v0.2.2
 	golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93
-	golang.org/x/text v0.3.3
+	golang.org/x/text v0.3.6
 )
 
-replace github.com/vdobler/chart => github.com/wzshiming/chart v1.0.0-fix
+replace github.com/vdobler/chart => github.com/wzshiming/chart v1.1.0-clean

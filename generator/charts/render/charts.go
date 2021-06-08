@@ -81,6 +81,7 @@ type ChartData struct {
 	ValueMessage string
 	Width        int
 	Height       int
+	MaxValue     int
 	Series       []Series
 }
 
@@ -98,6 +99,14 @@ func ChartRender(w io.Writer, data ChartData) error {
 		}
 		style := AutoStyle(series.Index)
 		points := series.Points.Values()
+		if data.MaxValue > 0 {
+			for i, point := range points {
+				if int(point.Y) > data.MaxValue {
+					point.Y = float64(data.MaxValue + 1)
+				}
+				points[i] = point
+			}
+		}
 		graph.AddData(series.Name, points, style)
 	}
 
@@ -113,6 +122,12 @@ func ChartRender(w io.Writer, data ChartData) error {
 	}
 	graph.YRange.Min = 1
 	graph.YRange.TicSetting.Format = func(f float64) string {
+		return strconv.FormatInt(int64(f), 10)
+	}
+	graph.ShowValFormat = func(f float64) string {
+		if int(f) > data.MaxValue {
+			return strconv.FormatInt(int64(data.MaxValue), 10) + "+"
+		}
 		return strconv.FormatInt(int64(f), 10)
 	}
 
