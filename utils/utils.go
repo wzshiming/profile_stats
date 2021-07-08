@@ -6,17 +6,55 @@ import (
 	"time"
 )
 
+const (
+	star     = "*"
+	negate   = "^"
+	separate = ","
+)
+
 func Match(format, value string) bool {
-	for _, f := range strings.Split(format, ",") {
-		if match(f, value) {
-			return true
+	matches := []string{}
+	exceptions := []string{}
+	for _, f := range strings.Split(format, separate) {
+		f := strings.TrimSpace(f)
+		if f == "" {
+			continue
 		}
+		if strings.HasPrefix(f, negate) {
+			exceptions = append(exceptions, f[1:])
+		} else {
+			matches = append(matches, f)
+		}
+	}
+	if len(matches) != 0 {
+		for _, match := range matches {
+			if matchSingle(match, value) {
+				for _, exception := range exceptions {
+					if matchSingle(exception, value) {
+						exactMatch := !strings.Contains(match, star)
+						exactException := !strings.Contains(exception, star)
+						if exactMatch && !exactException {
+							return true
+						}
+						return false
+					}
+				}
+				return true
+			}
+		}
+		return false
+	} else if len(exceptions) != 0 {
+		for _, exception := range exceptions {
+			if matchSingle(exception, value) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }
 
-func match(format string, value string) bool {
-	const star = "*"
+func matchSingle(format string, value string) bool {
 	if format == "" || format == star {
 		return true
 	}
