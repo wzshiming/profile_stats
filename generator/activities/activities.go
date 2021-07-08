@@ -51,6 +51,8 @@ func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_sta
 
 	repository, _ := args.String("repository")
 	branch, _ := args.String("branch")
+	labels, _ := args.String("labels")
+	labelsFilter, _ := args.String("labels_filter")
 
 	var states []source.PullRequestState
 	statesRaw, ok := args.String("states")
@@ -71,10 +73,10 @@ func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_sta
 		states = []source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged}
 	}
 
-	return a.Get(ctx, w, strings.Split(usernames, ","), size, states, repository, branch, last)
+	return a.Get(ctx, w, strings.Split(usernames, ","), size, states, repository, branch, labels, labelsFilter, last)
 }
 
-func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time) error {
+func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, size int, states []source.PullRequestState, repository, branch, labels, labelsFilter string, last time.Time) error {
 	items := []*source.PullRequest{}
 
 	cbs := []source.PullRequestCallback{}
@@ -113,12 +115,26 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			if pr.SortTime.Before(last) {
 				continue
 			}
-			if !utils.Match(branch, pr.BaseRef) {
+			if branch != "" && !utils.Match(branch, pr.BaseRef) {
 				continue
 			}
-			repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
-			if !utils.Match(repository, repo) {
-				continue
+			if labels != "" {
+				match := false
+				for _, label := range pr.Labels {
+					if utils.Match(labels, label) {
+						match = true
+						break
+					}
+				}
+				if !match {
+					continue
+				}
+			}
+			if repository != "" {
+				repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
+				if !utils.Match(repository, repo) {
+					continue
+				}
 			}
 			if !before.IsZero() && !pr.SortTime.Before(before) {
 				continue
@@ -129,6 +145,15 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 
 			if n := attrs[username]["name"]; n != "" {
 				pr.Username = n
+			}
+			if labelsFilter != "" {
+				list := make([]string, 0, len(pr.Labels))
+				for _, label := range pr.Labels {
+					if utils.Match(labelsFilter, label) {
+						list = append(list, label)
+					}
+				}
+				pr.Labels = list
 			}
 			items = append(items, pr)
 		}
@@ -150,31 +175,13 @@ func formatSourceActivities(prs []*source.PullRequest) []render.ActivitiesItem {
 		refAndIndex := strings.SplitN(pr.URL.Path, "/pull/", 2)
 		ref := strings.TrimPrefix(refAndIndex[0], "/")
 		index := refAndIndex[1]
-		state := pr.State
-		switch state {
-		case string(source.PullRequestStateMerged):
-			mergedAt := formatTime(pr.MergedAt)
-			state = fmt.Sprintf("Merged (%s)", mergedAt)
-		case string(source.PullRequestStateOpen):
-			createdAt := formatTime(pr.CreatedAt)
-			updatedAt := formatTime(pr.UpdatedAt)
-			if createdAt == updatedAt {
-				state = fmt.Sprintf("Open (%s)", createdAt)
-			} else {
-				state = fmt.Sprintf("Open (%s, %s)", createdAt, updatedAt)
-			}
-		case string(source.PullRequestStateClosed):
-			closedAt := formatTime(pr.ClosedAt)
-			state = fmt.Sprintf("Closed (%s)", closedAt)
-		}
-
 		item := render.ActivitiesItem{
 			URL:          pr.URL.String(),
 			Username:     pr.Username,
 			Link:         fmt.Sprintf("%s#%s", ref, index),
 			Title:        pr.Title,
 			BaseRef:      pr.BaseRef,
-			State:        state,
+			State:        pr.State,
 			Additions:    pr.Additions,
 			Deletions:    pr.Deletions,
 			Commits:      pr.Commits,
@@ -184,12 +191,9 @@ func formatSourceActivities(prs []*source.PullRequest) []render.ActivitiesItem {
 			ClosedAt:     pr.ClosedAt,
 			MergedAt:     pr.MergedAt,
 			UpdatedAt:    pr.UpdatedAt,
+			Labels:       pr.Labels,
 		}
 		items = append(items, item)
 	}
 	return items
-}
-
-func formatTime(t time.Time) string {
-	return t.Local().Format("2006-01-02")
 }
