@@ -36,6 +36,7 @@ func Update(ctx context.Context, token, tmp string, interval time.Duration, uris
 For details see %s
 `, name, selfRepo)
 		}),
+		putingh.WithTmpDir(tmp),
 	)
 
 	buf := bytes.NewBuffer(nil)
