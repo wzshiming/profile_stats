@@ -7,6 +7,7 @@ import (
 
 type Args interface {
 	String(name string) (string, bool)
+	StringSlice(name string) ([]string, bool)
 	Int(name string) (int, bool)
 }
 

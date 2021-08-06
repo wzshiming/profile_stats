@@ -30,8 +30,8 @@ const (
 )
 
 func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) (err error) {
-	usernames, ok := args.String("username")
-	if !ok || usernames == "" {
+	usernames, ok := args.StringSlice("username")
+	if !ok {
 		return fmt.Errorf("no usernames")
 	}
 
@@ -59,13 +59,12 @@ func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.A
 		}
 	}
 
-	repository, _ := args.String("repository")
-	branch, _ := args.String("branch")
+	repository, _ := args.StringSlice("repository")
+	branch, _ := args.StringSlice("branch")
 
 	var states []source.PullRequestState
-	statesRaw, ok := args.String("states")
+	statesSlice, ok := args.StringSlice("states")
 	if ok {
-		statesSlice := strings.Split(statesRaw, ",")
 		states = make([]source.PullRequestState, 0, len(statesSlice))
 		for _, state := range statesSlice {
 			s := source.PullRequestState(strings.ToUpper(state))
@@ -83,7 +82,7 @@ func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.A
 
 	title, ok := args.String("title")
 	if !ok {
-		title = kind + " " + strings.ReplaceAll(statesRaw, ",", "/") + " in the last " + span + " in the " + repository
+		title = kind + " " + strings.Join(statesSlice, "/") + " in the last " + span + " in the " + strings.Join(repository, ",")
 	}
 
 	width, _ := args.Int("width")
@@ -101,10 +100,10 @@ func (a *Charts) Generate(ctx context.Context, w io.Writer, args profile_stats.A
 		maxVal = 49
 	}
 
-	return a.Get(ctx, w, title, strings.Split(usernames, ","), size, states, repository, branch, last, kind, width, height, maxVal)
+	return a.Get(ctx, w, title, usernames, size, states, repository, branch, last, kind, width, height, maxVal)
 }
 
-func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch string, last time.Time, kind string, width, height, maxVal int) error {
+func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames []string, size int, states []source.PullRequestState, repository, branch []string, last time.Time, kind string, width, height, maxVal int) error {
 	data := render.ChartData{
 		Title:        title,
 		ValueMessage: kind,
@@ -153,11 +152,11 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 			if pr.SortTime.Before(last) {
 				continue
 			}
-			if !utils.Match(branch, pr.BaseRef) {
+			if len(branch) != 0 && !utils.Match(branch, pr.BaseRef) {
 				continue
 			}
 			repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
-			if !utils.Match(repository, repo) {
+			if len(repository) != 0 && !utils.Match(repository, repo) {
 				continue
 			}
 			if !before.IsZero() && !pr.SortTime.Before(before) {

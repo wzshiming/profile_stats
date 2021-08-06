@@ -33,6 +33,23 @@ func (a args) String(name string) (string, bool) {
 	return val, true
 }
 
+func (a args) StringSlice(name string) ([]string, bool) {
+	val, ok := a.String(name)
+	if !ok {
+		return []string{}, false
+	}
+	vals := []string{}
+	for _, v := range strings.Split(val, "\n") {
+		for _, v := range strings.Split(v, ",") {
+			s := strings.TrimSpace(v)
+			if s != "" {
+				vals = append(vals, s)
+			}
+		}
+	}
+	return vals, len(vals) != 0
+}
+
 func (a args) Int(name string) (int, bool) {
 	raw, ok := a.String(name)
 	if !ok {

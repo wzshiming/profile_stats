@@ -7,16 +7,15 @@ import (
 )
 
 const (
-	star     = "*"
-	negate   = "^"
-	separate = ","
+	star   = "*"
+	negate = "^"
 )
 
-func Match(format, value string) bool {
+func Match(pattern []string, value string) bool {
 	matches := []string{}
 	exceptions := []string{}
-	for _, f := range strings.Split(format, separate) {
-		f := strings.TrimSpace(f)
+	for _, v := range pattern {
+		f := strings.TrimSpace(v)
 		if f == "" {
 			continue
 		}

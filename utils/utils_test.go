@@ -1,11 +1,13 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMatch(t *testing.T) {
 	type args struct {
-		format string
-		value  string
+		pattern []string
+		value   string
 	}
 	tests := []struct {
 		name string
@@ -13,53 +15,57 @@ func TestMatch(t *testing.T) {
 		want bool
 	}{
 		{
-			args: args{"", "x"},
+			args: args{[]string{""}, "x"},
 			want: false,
 		},
 		{
-			args: args{"*", "x"},
+			args: args{[]string{"*"}, "x"},
 			want: true,
 		},
 		{
-			args: args{"^*", "x"},
+			args: args{[]string{"^*"}, "x"},
 			want: false,
 		},
 		{
-			args: args{"x", "x"},
+			args: args{[]string{"x"}, "x"},
 			want: true,
 		},
 		{
-			args: args{"x*", "xy"},
+			args: args{[]string{"x*"}, "xy"},
 			want: true,
 		},
 		{
-			args: args{"*x", "yx"},
+			args: args{[]string{"*x"}, "yx"},
 			want: true,
 		},
 		{
-			args: args{"*x*", "yxy"},
+			args: args{[]string{"*x*"}, "yxy"},
 			want: true,
 		},
 		{
-			args: args{"x", "y"},
+			args: args{[]string{"x"}, "y"},
 			want: false,
 		},
 		{
-			args: args{"x*,^xy", "xy"},
+			args: args{[]string{"x*", "^xy"}, "xy"},
 			want: false,
 		},
 		{
-			args: args{"xy,^x*", "xy"},
+			args: args{[]string{"xy", "^x*"}, "xy"},
 			want: true,
 		},
 		{
-			args: args{"^z", "xy"},
+			args: args{[]string{"xy", "xz"}, "xz"},
+			want: true,
+		},
+		{
+			args: args{[]string{"^z"}, "xy"},
 			want: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := Match(tt.args.format, tt.args.value); got != tt.want {
+			if got := Match(tt.args.pattern, tt.args.value); got != tt.want {
 				t.Errorf("Match() = %v, want %v", got, tt.want)
 			}
 		})

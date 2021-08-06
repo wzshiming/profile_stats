@@ -26,8 +26,8 @@ func NewActivities(src *source.Source) *Activities {
 }
 
 func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_stats.Args) (err error) {
-	usernames, ok := args.String("username")
-	if !ok || usernames == "" {
+	usernames, ok := args.StringSlice("username")
+	if !ok {
 		return fmt.Errorf("no usernames")
 	}
 
@@ -49,15 +49,14 @@ func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_sta
 		}
 	}
 
-	repository, _ := args.String("repository")
-	branch, _ := args.String("branch")
-	labels, _ := args.String("labels")
-	labelsFilter, _ := args.String("labels_filter")
+	repository, _ := args.StringSlice("repository")
+	branch, _ := args.StringSlice("branch")
+	labels, _ := args.StringSlice("labels")
+	labelsFilter, _ := args.StringSlice("labels_filter")
 
 	var states []source.PullRequestState
-	statesRaw, ok := args.String("states")
+	statesSlice, ok := args.StringSlice("states")
 	if ok {
-		statesSlice := strings.Split(statesRaw, ",")
 		states = make([]source.PullRequestState, 0, len(statesSlice))
 		for _, state := range statesSlice {
 			s := source.PullRequestState(strings.ToUpper(state))
@@ -73,10 +72,10 @@ func (a *Activities) Generate(ctx context.Context, w io.Writer, args profile_sta
 		states = []source.PullRequestState{source.PullRequestStateOpen, source.PullRequestStateClosed, source.PullRequestStateMerged}
 	}
 
-	return a.Get(ctx, w, strings.Split(usernames, ","), size, states, repository, branch, labels, labelsFilter, last)
+	return a.Get(ctx, w, usernames, size, states, repository, branch, labels, labelsFilter, last)
 }
 
-func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, size int, states []source.PullRequestState, repository, branch, labels, labelsFilter string, last time.Time) error {
+func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, size int, states []source.PullRequestState, repository, branch, labels, labelsFilter []string, last time.Time) error {
 	items := []*source.PullRequest{}
 
 	cbs := []source.PullRequestCallback{}
@@ -115,10 +114,10 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			if pr.SortTime.Before(last) {
 				continue
 			}
-			if branch != "" && !utils.Match(branch, pr.BaseRef) {
+			if len(branch) != 0 && !utils.Match(branch, pr.BaseRef) {
 				continue
 			}
-			if labels != "" {
+			if len(labels) != 0 {
 				match := false
 				for _, label := range pr.Labels {
 					if utils.Match(labels, label) {
@@ -130,7 +129,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 					continue
 				}
 			}
-			if repository != "" {
+			if len(repository) != 0 {
 				repo := strings.TrimPrefix(strings.Split(pr.URL.Path, "/pull/")[0], "/")
 				if !utils.Match(repository, repo) {
 					continue
@@ -146,7 +145,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 			if n := attrs[username]["name"]; n != "" {
 				pr.Username = n
 			}
-			if labelsFilter != "" {
+			if len(labelsFilter) != 0 {
 				list := make([]string, 0, len(pr.Labels))
 				for _, label := range pr.Labels {
 					if utils.Match(labelsFilter, label) {
