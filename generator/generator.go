@@ -32,7 +32,7 @@ func NewHandler(src *source.Source) *Handler {
 
 	r.register("now", now.NewNow())
 	r.register("updatedat", now.NewNow())
-	r.register("stats", placeholder.NewPlaceHolder())
+	r.register("placeholder", placeholder.NewPlaceHolder())
 	r.register("activities", activities.NewActivities(src))
 	r.register("stats", stats.NewStats(src))
 	r.register("charts", charts.NewCharts(src))

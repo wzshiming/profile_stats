@@ -10,6 +10,7 @@ import (
 
 	"github.com/wzshiming/profile_stats"
 	"github.com/wzshiming/profile_stats/generator/charts/render"
+	placeholder_render "github.com/wzshiming/profile_stats/generator/placeholder/render"
 	"github.com/wzshiming/profile_stats/source"
 	"github.com/wzshiming/profile_stats/utils"
 )
@@ -197,5 +198,12 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 		})
 	}
 
+	if len(data.Series) == 0 {
+		return placeholder_render.PlaceHolderRender(w, placeholder_render.PlaceHolderData{
+			Width:  len(title) * 9,
+			Height: 30,
+			Text:   title,
+		})
+	}
 	return render.ChartRender(w, data)
 }
