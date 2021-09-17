@@ -162,8 +162,8 @@ github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/sergi/go-diff v1.1.0 h1:we8PVUC3FE2uYfodKH/nBHMSetSfHDR6scGdBi+erh0=
 github.com/sergi/go-diff v1.1.0/go.mod h1:STckp+ISIX8hZLjrqAeVduY0gWCT9IjLuqbuNXdaHfM=
-github.com/shurcooL/githubv4 v0.0.0-20201206200315-234843c633fa h1:jozR3igKlnYCj9IVHOVump59bp07oIRoLQ/CcjMYIUA=
-github.com/shurcooL/githubv4 v0.0.0-20201206200315-234843c633fa/go.mod h1:hAF0iLZy4td2EX+/8Tw+4nodhlMrwN3HupfaXj3zkGo=
+github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228 h1:N5B+JgvM/DVYIxreItPJMM3yWrNO/GB2q4nESrtBisM=
+github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228/go.mod h1:hAF0iLZy4td2EX+/8Tw+4nodhlMrwN3HupfaXj3zkGo=
 github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a h1:KikTa6HtAK8cS1qjvUvvq4QO21QnwC+EfvB+OAuZ/ZU=
 github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a/go.mod h1:AuYgA5Kyo4c7HfUmvRGs/6rGlMMV/6B1bVnB9JxJEEg=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
@@ -173,10 +173,10 @@ github.com/wzshiming/chart v1.1.0-clean h1:gos6eaXkG5zkyMuZtJ8+/EdqcNdSE06pBUHdV
 github.com/wzshiming/chart v1.1.0-clean/go.mod h1:mlEBbmN2qrGYuhAZdK6755ZdWaZEI1pKS1C5nXn4bXY=
 github.com/wzshiming/httpcache v0.3.0 h1:T+nP+udcC736PUC4T6wTH6Teyd4aFISpqwUqT46xs7A=
 github.com/wzshiming/httpcache v0.3.0/go.mod h1:b5kBGWI1rExt9fgrc18ml+MGQtzn39OPgmxZNlQmd6I=
-github.com/wzshiming/putingh v0.6.0 h1:xYpzzjcDG+mRIRC9LRdVi3Zvh/RbZB27VqMS0Sx1H/c=
-github.com/wzshiming/putingh v0.6.0/go.mod h1:IHBoiFo0EpQiJSBLHTqYM45siNarIZL19XJIqfOiXUs=
-github.com/wzshiming/xmlinjector v0.2.2 h1:UqsH/MnpuNXYYpiCbb4Knba30kgetJs/Oc2RnCicd/M=
-github.com/wzshiming/xmlinjector v0.2.2/go.mod h1:adSzvejYcmaY2LrUMiEc1nkQWR7exHQSZDGpP2EVdlM=
+github.com/wzshiming/putingh v0.6.2 h1:5fiwcxC2gMs5ABtEDQHsa1lKK1E10nigrkraoizAUNw=
+github.com/wzshiming/putingh v0.6.2/go.mod h1:IHBoiFo0EpQiJSBLHTqYM45siNarIZL19XJIqfOiXUs=
+github.com/wzshiming/xmlinjector v0.3.0 h1:n/0WY6NgkbCeZigntuS8SxKmcewwfnj7v0TvaAiAoDY=
+github.com/wzshiming/xmlinjector v0.3.0/go.mod h1:/2R1Fsr1OnJY5LXp0UjX8MqJMX0dA9c3rY7nJvPa5mY=
 github.com/xanzy/ssh-agent v0.2.1 h1:TCbipTQL2JiiCprBWx9frJ2eJlCYT00NmctrHxVAr70=
 github.com/xanzy/ssh-agent v0.2.1/go.mod h1:mLlQY/MoOhWBj+gOGMQkOeiEvkx+8pJSI+0Bx9h2kr4=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
