@@ -288,20 +288,6 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 	}
 
 	conv := func(r *pr) *PullRequest {
-		commits := int(r.Commits.TotalCount)
-		if commits > 1 {
-			if r.MergeCommit.Parents.TotalCount == 1 {
-				commits = 1
-			} else if len(r.Commits.Nodes) != 0 {
-				commit := r.Commits.Nodes[0].Commit.CommitUrl
-				for _, node := range r.MergeCommit.Parents.Nodes {
-					if node.CommitUrl == commit {
-						commits = 1
-						break
-					}
-				}
-			}
-		}
 		p := PullRequest{
 			Username:     string(r.Author.Login),
 			Title:        string(r.Title),
@@ -312,7 +298,7 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 			Deletions:    int(r.Deletions),
 			ChangedFiles: int(r.ChangedFiles),
 			ChangeSize:   changeSize(int(r.Additions + r.Deletions)),
-			Commits:      commits,
+			Commits:      int(r.Commits.TotalCount),
 			CreatedAt:    r.CreatedAt.Time,
 			ClosedAt:     r.ClosedAt.Time,
 			MergedAt:     r.MergedAt.Time,
@@ -323,6 +309,9 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 			labels := make([]string, 0, len(r.Labels.Nodes))
 			for _, label := range r.Labels.Nodes {
 				labels = append(labels, string(label.Name))
+				if string(label.Name) == "tide/merge-method-squash" {
+					p.Commits = 1
+				}
 			}
 			p.Labels = labels
 		}
