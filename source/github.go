@@ -265,19 +265,19 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 		UpdatedAt    ghv4.DateTime
 		Commits      struct {
 			TotalCount ghv4.Int
-			Nodes      []struct {
-				Commit struct {
-					CommitUrl ghv4.URI
-				}
-			}
-		} `graphql:"commits(first: 1)"`
+			//	Nodes      []struct {
+			//		Commit struct {
+			//			CommitUrl ghv4.URI
+			//		}
+			//	}
+		} // `graphql:"commits(first: 1)"`
 		MergeCommit struct {
 			Parents struct {
 				TotalCount ghv4.Int
-				Nodes      []struct {
-					CommitUrl ghv4.URI
-				}
-			} `graphql:"parents(first: 2)"`
+				//		Nodes      []struct {
+				//			CommitUrl ghv4.URI
+				//		}
+			} // `graphql:"parents(first: 2)"`
 		}
 		Labels struct {
 			TotalCount ghv4.Int
@@ -292,14 +292,14 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 		if commits > 1 {
 			if r.MergeCommit.Parents.TotalCount == 1 {
 				commits = 1
-			} else if len(r.Commits.Nodes) != 0 {
-				commit := r.Commits.Nodes[0].Commit.CommitUrl
-				for _, node := range r.MergeCommit.Parents.Nodes {
-					if node.CommitUrl == commit {
-						commits = 1
-						break
-					}
-				}
+				//} else if len(r.Commits.Nodes) != 0 {
+				//	commit := r.Commits.Nodes[0].Commit.CommitUrl
+				//	for _, node := range r.MergeCommit.Parents.Nodes {
+				//		if node.CommitUrl == commit {
+				//			commits = 1
+				//			break
+				//		}
+				//	}
 			}
 		}
 		p := PullRequest{
