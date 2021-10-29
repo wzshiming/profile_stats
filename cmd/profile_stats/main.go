@@ -22,16 +22,17 @@ func main() {
 	token := os.Getenv("GH_TOKEN")
 	warningExit, _ := strconv.ParseBool(os.Getenv("WARNING_EXIT"))
 	interval, _ := time.ParseDuration(os.Getenv("INTERVAL"))
+	retry, _ := strconv.ParseInt(os.Getenv("RETRY"), 0, 64)
 	tmp := os.Getenv("TMP_DIR")
 	uris := os.Args[1:]
-	err := Update(ctx, token, tmp, interval, warningExit, uris...)
+	err := Update(ctx, token, tmp, interval, int(retry), warningExit, uris...)
 	if err != nil {
 		log.Println(err)
 		os.Exit(2)
 	}
 }
 
-func Update(ctx context.Context, token, tmp string, interval time.Duration, warningExit bool, uris ...string) error {
+func Update(ctx context.Context, token, tmp string, interval time.Duration, retry int, warningExit bool, uris ...string) error {
 	putCli := putingh.NewPutInGH(token,
 		putingh.WithGitCommitMessage(func(owner, repo, branch, name, path string) string {
 			return fmt.Sprintf(`Automatic update %s
@@ -43,7 +44,7 @@ For details see %s
 	)
 
 	buf := bytes.NewBuffer(nil)
-	src := source.NewSource(token, tmp, interval)
+	src := source.NewSource(token, tmp, interval, retry)
 	regi := generator.NewHandler(src)
 	for _, uri := range uris {
 		buf.Reset()
