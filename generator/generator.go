@@ -43,12 +43,14 @@ func (r *Handler) register(name string, generator profile_stats.Generator) {
 	r.registry[name] = generator
 }
 
-func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, error) {
+func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, []string, error) {
 	buf := bytes.NewBuffer(nil)
-	return xmlinjector.Inject([]byte(key), origin, func(args, origin []byte) []byte {
+	var warnings []string
+	date, err := xmlinjector.Inject([]byte(key), origin, func(args, origin []byte) []byte {
 		tag := NewArgs(string(args), true)
 		template, ok := tag.String("template")
 		if !ok || template == "" {
+			warnings = append(warnings, fmt.Sprintf("%q: no template", args))
 			return errInfo("no template", origin)
 		}
 
@@ -59,11 +61,13 @@ func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, error) {
 
 		generator, ok := r.registry[template]
 		if !ok {
+			warnings = append(warnings, fmt.Sprintf("%q: not support template %q", args, template))
 			return errInfo(fmt.Sprintf("not support template %q", template), origin)
 		}
 		buf.Reset()
 		err := generator.Generate(ctx, buf, tag)
 		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%q: %s", args, err.Error()))
 			return errInfo(err.Error(), origin)
 		}
 
@@ -84,6 +88,7 @@ func (r *Handler) Handle(ctx context.Context, origin []byte) ([]byte, error) {
 		}
 		return tmp
 	})
+	return date, warnings, err
 }
 
 func errInfo(msg string, origin []byte) []byte {

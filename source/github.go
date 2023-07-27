@@ -1,8 +1,10 @@
 package source
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -36,16 +38,18 @@ type OrgStat struct {
 }
 
 type intervalRequest struct {
+	retry         int
 	interval      time.Duration
 	last          time.Time
 	roundTripperr http.RoundTripper
 }
 
-func newIntervalRequest(roundTripperr http.RoundTripper, interval time.Duration) http.RoundTripper {
+func newIntervalRequest(roundTripperr http.RoundTripper, interval time.Duration, retry int) http.RoundTripper {
 	if interval <= 0 {
 		return roundTripperr
 	}
 	return &intervalRequest{
+		retry:         retry,
 		roundTripperr: roundTripperr,
 		interval:      interval,
 	}
@@ -60,10 +64,34 @@ func (l *intervalRequest) RoundTrip(r *http.Request) (*http.Response, error) {
 	if s := l.interval - sub; s > 0 {
 		time.Sleep(s)
 	}
-	return l.roundTripperr.RoundTrip(r)
+	tmpBody := bytes.NewBuffer(make([]byte, 0, r.ContentLength))
+	r.Body = struct {
+		io.Reader
+		io.Closer
+	}{
+		Reader: io.TeeReader(r.Body, tmpBody),
+		Closer: r.Body,
+	}
+
+	resp, err := l.roundTripperr.RoundTrip(r)
+	if err != nil {
+		return nil, err
+	}
+	// This may be the result of a timeout. we need to reset the body. and retry.
+	for i := 0; i < l.retry && resp.StatusCode == http.StatusBadGateway; i++ {
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		time.Sleep(l.interval)
+		r.Body = io.NopCloser(bytes.NewReader(tmpBody.Bytes()))
+		resp, err = l.roundTripperr.RoundTrip(r)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return resp, nil
 }
 
-func NewSource(token string, cache string, interval time.Duration) *Source {
+func NewSource(token string, cache string, interval time.Duration, retry int) *Source {
 	src := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: token},
 	)
@@ -75,7 +103,7 @@ func NewSource(token string, cache string, interval time.Duration) *Source {
 		opts = append(opts, httpcache.WithStorer(httpcache.DirectoryStorer(cache)))
 	}
 
-	transport = newIntervalRequest(transport, interval)
+	transport = newIntervalRequest(transport, interval, retry)
 	return &Source{
 		cliv3: ghv3.NewClient(&http.Client{
 			Transport: httpcache.NewRoundTripper(transport,
@@ -265,19 +293,19 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 		UpdatedAt    ghv4.DateTime
 		Commits      struct {
 			TotalCount ghv4.Int
-			Nodes      []struct {
-				Commit struct {
-					CommitUrl ghv4.URI
-				}
-			}
-		} `graphql:"commits(first: 1)"`
+			//	Nodes      []struct {
+			//		Commit struct {
+			//			CommitUrl ghv4.URI
+			//		}
+			//	}
+		} // `graphql:"commits(first: 1)"`
 		MergeCommit struct {
 			Parents struct {
 				TotalCount ghv4.Int
-				Nodes      []struct {
-					CommitUrl ghv4.URI
-				}
-			} `graphql:"parents(first: 2)"`
+				//		Nodes      []struct {
+				//			CommitUrl ghv4.URI
+				//		}
+			} // `graphql:"parents(first: 2)"`
 		}
 		Labels struct {
 			TotalCount ghv4.Int
@@ -292,14 +320,14 @@ func (s *Source) PullRequests(ctx context.Context, username string, states []Pul
 		if commits > 1 {
 			if r.MergeCommit.Parents.TotalCount == 1 {
 				commits = 1
-			} else if len(r.Commits.Nodes) != 0 {
-				commit := r.Commits.Nodes[0].Commit.CommitUrl
-				for _, node := range r.MergeCommit.Parents.Nodes {
-					if node.CommitUrl == commit {
-						commits = 1
-						break
-					}
-				}
+				//} else if len(r.Commits.Nodes) != 0 {
+				//	commit := r.Commits.Nodes[0].Commit.CommitUrl
+				//	for _, node := range r.MergeCommit.Parents.Nodes {
+				//		if node.CommitUrl == commit {
+				//			commits = 1
+				//			break
+				//		}
+				//	}
 			}
 		}
 		p := PullRequest{
