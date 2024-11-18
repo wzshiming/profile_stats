@@ -1,40 +1,47 @@
 module github.com/wzshiming/profile_stats
 
-go 1.17
+go 1.21
 
 require (
 	github.com/ajstarks/svgo v0.0.0-20210927141636-6d70534b1098
-	github.com/google/go-github/v33 v33.0.0
+	github.com/google/go-github/v66 v66.0.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/shurcooL/githubv4 v0.0.0-20210922025249-6831e00d857f
+	github.com/shurcooL/githubv4 v0.0.0-20240727222349-48295856cce7
 	github.com/vdobler/chart v0.0.0
-	github.com/wzshiming/httpcache v0.3.1
+	github.com/wzshiming/httpcache v0.4.2
 	github.com/wzshiming/putingh v0.6.2
 	github.com/wzshiming/xmlinjector v0.3.0
-	golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
-	golang.org/x/text v0.3.7
+	golang.org/x/oauth2 v0.24.0
+	golang.org/x/text v0.20.0
 )
 
 require (
-	github.com/emirpasic/gods v1.12.0 // indirect
-	github.com/go-git/gcfg v1.5.0 // indirect
-	github.com/go-git/go-billy/v5 v5.0.0 // indirect
-	github.com/go-git/go-git/v5 v5.2.0 // indirect
-	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/google/go-querystring v1.0.0 // indirect
-	github.com/imdario/mergo v0.3.9 // indirect
+	dario.cat/mergo v1.0.0 // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
+	github.com/cloudflare/circl v1.3.7 // indirect
+	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
+	github.com/emirpasic/gods v1.18.1 // indirect
+	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
+	github.com/go-git/go-billy/v5 v5.5.0 // indirect
+	github.com/go-git/go-git/v5 v5.11.0 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/google/go-github/v33 v33.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
-	github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd // indirect
+	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/shurcooL/graphql v0.0.0-20200928012149-18c5c3165e3a // indirect
-	github.com/xanzy/ssh-agent v0.2.1 // indirect
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
-	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
-	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
-	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/protobuf v1.25.0 // indirect
+	github.com/skeema/knownhosts v1.2.1 // indirect
+	github.com/xanzy/ssh-agent v0.3.3 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/sync v0.9.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/tools v0.21.1-0.20240508182429-e35e4ccd0d2d // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
 
