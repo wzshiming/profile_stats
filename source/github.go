@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	ghv3 "github.com/google/go-github/v33/github"
+	ghv3 "github.com/google/go-github/v66/github"
 	ghv4 "github.com/shurcooL/githubv4"
 	"github.com/wzshiming/httpcache"
 	"golang.org/x/oauth2"
