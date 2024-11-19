@@ -125,7 +125,7 @@ func (a *Charts) Get(ctx context.Context, w io.Writer, title string, usernames [
 	for i, username := range usernames {
 		prs, err := a.source.PullRequests(ctx, username,
 			states,
-			source.IssueOrderFieldCreatedAt, source.OrderDirectionDesc, size,
+			source.IssueOrderFieldUpdatedAt, source.OrderDirectionDesc, size,
 			cbs...)
 		if err != nil {
 			return fmt.Errorf("list PullRequests %q: %w", username, err)
