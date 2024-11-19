@@ -78,7 +78,7 @@ func (l *intervalRequest) RoundTrip(r *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 	// This may be the result of a timeout. we need to reset the body. and retry.
-	for i := 0; i < l.retry && resp.StatusCode == http.StatusBadGateway; i++ {
+	for i := 0; i < l.retry && resp.StatusCode >= http.StatusInternalServerError; i++ {
 		io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 		time.Sleep(l.interval)
