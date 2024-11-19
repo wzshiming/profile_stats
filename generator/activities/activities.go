@@ -81,7 +81,7 @@ func (a *Activities) Get(ctx context.Context, w io.Writer, usernames []string, s
 	cbs := []source.PullRequestCallback{}
 	if !last.IsZero() {
 		cbs = append(cbs, func(pr *source.PullRequest) bool {
-			return pr.CreatedAt.After(last)
+			return pr.MergedAt.After(last)
 		})
 	}
 
