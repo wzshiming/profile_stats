@@ -57,14 +57,16 @@ func ActivitiesRender(w io.Writer, data ActivitiesData) error {
 		}
 
 		change := fmt.Sprintf("%s<br/>(+%d,-%d)/%d/%d", item.ChangeSize, item.Additions, item.Deletions, item.Commits, item.ChangedFiles)
-		link := fmt.Sprintf("[%s](%s)", item.Link, item.URL)
+		link := fmt.Sprintf("[%s](%s)", strings.ReplaceAll(item.Title, "|", "\\|"), item.URL)
 		t = append(t, []string{
 			link, item.BaseRef, state, item.Username, change, label,
 		})
 	}
 	table := tablewriter.NewWriter(w)
 	table.SetAutoFormatHeaders(false)
-	table.SetHeader([]string{"Link", "Branch", "State", "Username", "Change Size/Commits/File", "Labels"})
+	table.SetAutoWrapText(false)
+	table.SetColWidth(500)
+	table.SetHeader([]string{"Title", "Branch", "State", "Username", "Change Size/Commits/File", "Labels"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(t)
